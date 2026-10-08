@@ -1,0 +1,577 @@
+.agent-shell {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  background: #fff;
+  color: #262a31;
+}
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #f4f5f7;
+  border-right: 1px solid #e3e6ea;
+  padding: 20px 12px 12px;
+}
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 24px;
+  font-size: 18px;
+  font-weight: 650;
+}
+.app-brand > svg {
+  color: #167d68;
+  flex-shrink: 0;
+}
+.brand-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #777e89;
+  margin-left: auto;
+}
+.primary-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nav-entry {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  color: #535b68;
+  text-decoration: none;
+  font-size: 13px;
+  border-radius: 6px;
+  min-width: 0;
+}
+.nav-entry:hover {
+  background: #e9ecf0;
+  color: #262a31;
+}
+.nav-entry.active {
+  background: #e0ede8;
+  color: #116750;
+  font-weight: 600;
+}
+.nav-entry > svg {
+  flex-shrink: 0;
+}
+.session-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 26px 6px 8px;
+  color: #757c88;
+  font-size: 12px;
+}
+.session-list {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+.session-entry {
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  min-width: 0;
+  padding: 2px 4px;
+  margin-bottom: 2px;
+}
+.session-entry.selected {
+  background: #e6e9ee;
+}
+.session-select {
+  display: block;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: #4c5360;
+  padding: 8px 6px;
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-entry .ant-btn {
+  flex-shrink: 0;
+}
+.settings-entry {
+  margin-top: 12px;
+  border-top: 1px solid #e2e5e9;
+  border-radius: 0;
+  padding-top: 16px;
+}
+.run-indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #167d68;
+}
+.app-main {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.chat-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.page-header {
+  padding: 20px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #edf0f3;
+  flex-shrink: 0;
+}
+.page-header h1 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.page-header > div {
+  min-width: 0;
+}
+.muted {
+  display: block;
+  font-size: 12px;
+  color: #858c98;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.chat-page > .ant-alert {
+  margin: 12px 24px 0;
+  flex-shrink: 0;
+}
+.message-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 28px;
+}
+.message-column {
+  max-width: 860px;
+  margin: 0 auto;
+}
+.message-row {
+  margin-bottom: 24px;
+  min-width: 0;
+}
+.message-row .ant-bubble {
+  max-width: 100%;
+}
+.message-row .ant-bubble-avatar {
+  color: #167d68;
+}
+.message-row.user .ant-bubble-content {
+  background: #f0f2f5;
+}
+.message-row.assistant .ant-bubble-body {
+  flex: 1;
+  min-width: 0;
+}
+.assistant-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #424b56;
+}
+.assistant-message {
+  min-width: 0;
+  width: 100%;
+}
+.answer-markdown {
+  font-size: 14px;
+  line-height: 1.85;
+  color: #303843;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.answer-markdown h1,
+.answer-markdown h2,
+.answer-markdown h3,
+.answer-markdown h4 {
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 20px 0 10px;
+  letter-spacing: 0;
+}
+.answer-markdown h1 {
+  font-size: 21px;
+}
+.answer-markdown h2 {
+  font-size: 18px;
+}
+.answer-markdown h3,
+.answer-markdown h4 {
+  font-size: 15px;
+}
+.answer-markdown > :first-child {
+  margin-top: 0;
+}
+.answer-markdown p {
+  margin: 0 0 12px;
+}
+.answer-markdown ul,
+.answer-markdown ol {
+  padding-left: 24px;
+  margin: 10px 0 16px;
+}
+.answer-markdown li {
+  margin: 4px 0;
+}
+.answer-markdown blockquote {
+  border-left: 3px solid #bfd4ce;
+  padding: 2px 0 2px 14px;
+  color: #687581;
+  margin: 16px 0;
+}
+.answer-markdown blockquote p:last-child {
+  margin-bottom: 0;
+}
+.answer-markdown a {
+  color: #13735d;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.answer-markdown :not(pre) > code {
+  background: #eef1f4;
+  border: 1px solid #e1e6eb;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+  color: #3c536d;
+}
+.answer-markdown .ant-codeHighlighter {
+  margin: 16px 0;
+  max-width: 100%;
+  min-width: 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.answer-markdown .ant-codeHighlighter pre {
+  max-width: 100%;
+  overflow: auto;
+  font-size: 12px;
+}
+.markdown-table-scroll {
+  max-width: 100%;
+  overflow: auto;
+  margin: 16px 0;
+}
+.markdown-table-scroll table {
+  width: 100%;
+  min-width: 320px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.markdown-table-scroll th,
+.markdown-table-scroll td {
+  padding: 9px 12px;
+  border: 1px solid #e1e6eb;
+  text-align: left;
+}
+.markdown-table-scroll th {
+  background: #f4f6f8;
+  font-weight: 600;
+}
+.markdown-image-alt {
+  color: #7c8793;
+  font-size: 12px;
+}
+.answer-think {
+  margin: 0 0 18px;
+}
+.answer-think .answer-markdown {
+  color: #76818e;
+  font-size: 13px;
+}
+.answer-think .ant-think-content {
+  max-height: 300px;
+  overflow: auto;
+}
+.execution-trail {
+  margin: 0 0 22px;
+  min-width: 0;
+}
+.execution-trail-label {
+  color: #6d7783;
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+.execution-trail-label > span {
+  margin-left: 8px;
+  color: #959eaa;
+}
+.execution-step-title {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.execution-step-title > span:first-child {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.execution-step-title .ant-tag {
+  font-size: 11px;
+  flex-shrink: 0;
+  margin: 0;
+}
+.execution-trail .ant-thought-chain-item-content {
+  min-width: 0;
+  max-width: 100%;
+}
+.message-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  height: 28px;
+}
+.message-completion {
+  font-size: 11px;
+  color: #939ca7;
+}
+.answer-pending {
+  font-size: 13px;
+  color: #7d8793;
+  padding: 4px 0;
+}
+.tool-spinning {
+  animation: tool-spin 1.4s linear infinite;
+}
+@keyframes tool-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-spinning {
+    animation: none;
+  }
+}
+.conversation-empty {
+  height: 100%;
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  color: #737c87;
+}
+.conversation-empty > svg {
+  color: #167d68;
+}
+.conversation-empty h2 {
+  font-size: 24px;
+  margin: 0;
+  color: #343b44;
+}
+.composer-area {
+  padding: 16px 28px 24px;
+  width: 100%;
+  max-width: 916px;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+.composer-area .ant-sender {
+  border-radius: 8px;
+  background: #fff;
+}
+.active-task-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 12px;
+  color: #4d665a;
+}
+.cancel-text {
+  margin-top: 4px;
+  color: #757c88;
+}
+.tool-result {
+  margin: 10px 0 0 36px;
+  padding: 12px 14px;
+  border: 1px solid #e4e8ed;
+  border-radius: 6px;
+  background: #fafbfc;
+  min-width: 0;
+}
+.tool-result-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.tool-result-heading .ant-tag {
+  flex-shrink: 0;
+}
+.result-summary {
+  color: #69717d;
+  font-size: 12px;
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.structured-data {
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 340px;
+  overflow: auto;
+  color: #4c5462;
+  margin: 0;
+}
+.approval-meta {
+  color: #787f8a;
+  margin: 12px 0;
+  font-size: 12px;
+}
+.approval-data {
+  padding: 14px;
+  background: #f5f7f9;
+  max-height: 55vh;
+}
+.settings-content {
+  max-width: 680px;
+  padding: 28px;
+}
+.settings-content .ant-alert {
+  margin-top: 22px;
+}
+.capabilities {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 24px;
+}
+.data-notice {
+  color: #767e8a;
+  font-size: 12px;
+  line-height: 1.8;
+  margin-top: 28px;
+}
+.boot-state {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: #fff;
+}
+.storage-warning {
+  position: fixed;
+  z-index: 1100;
+  top: 0;
+  width: 100%;
+}
+.path-text {
+  overflow-wrap: anywhere;
+}
+.tool-page {
+  min-height: 100%;
+}
+.tool-content {
+  padding: 24px 28px;
+}
+.tool-controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.tool-controls .ant-form-item {
+  margin-bottom: 0;
+}
+.tool-section {
+  padding: 22px 0;
+  border-top: 1px solid #e8ecf0;
+}
+.tool-section h2 {
+  font-size: 15px;
+  margin: 0 0 16px;
+}
+.monitor-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.ant-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ant-btn > svg {
+  flex-shrink: 0;
+}
+@media (max-width: 850px) {
+  .agent-shell {
+    grid-template-columns: 176px minmax(0, 1fr);
+  }
+  .app-sidebar {
+    padding: 16px 8px 8px;
+  }
+  .brand-label {
+    display: none;
+  }
+  .page-header {
+    padding: 16px 20px;
+  }
+  .message-scroll {
+    padding: 20px 16px;
+  }
+  .composer-area {
+    padding: 12px 16px 16px;
+  }
+  .tool-content {
+    padding: 20px;
+  }
+}
+@media (max-width: 560px) {
+  .agent-shell {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+  .app-brand {
+    padding: 0 8px 16px;
+  }
+  .app-brand > span,
+  .nav-entry > span,
+  .session-heading,
+  .session-list {
+    display: none;
+  }
+  .nav-entry {
+    justify-content: center;
+    padding: 12px 8px;
+  }
+  .settings-entry {
+    margin-top: auto;
+  }
+  .tool-result {
+    margin-left: 0;
+  }
+  .settings-content,
+  .tool-content {
+    padding: 16px;
+  }
+}

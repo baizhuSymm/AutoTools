@@ -1,11 +1,13 @@
 {
   "name": "auto-tools",
   "version": "1.0.0",
-  "description": "Wallpaper Video Extractor - Electron + React + Bootstrap",
+  "description": "Local tool Agent - Electron, LangChain and Ant Design X",
   "main": "./out/main/index.js",
   "author": "example.com",
   "homepage": "https://electron-vite.org",
   "scripts": {
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:electron": "node tests/electron.smoke.mjs",
     "format": "prettier --write .",
     "lint": "eslint --cache .",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
@@ -21,13 +23,22 @@
     "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
+    "@ant-design/x": "^2.9.0",
+    "@ant-design/x-markdown": "^2.9.0",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@langchain/core": "^1.2.17",
+    "@langchain/openai": "^1.6.2",
+    "antd": "^6.6.5",
     "bootstrap": "^5.3.3",
     "bootstrap-icons": "^1.11.3",
+    "langchain": "^1.5.15",
+    "lucide-react": "^1.53.0",
+    "marked": "^16.4.2",
     "react-bootstrap": "^2.10.5",
     "react-router-dom": "^7.18.2",
-    "react-select": "^5.10.2"
+    "react-select": "^5.10.2",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2.1.0",
@@ -42,9 +53,11 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "playwright": "^1.64.0",
     "prettier": "^3.7.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "tsx": "^4.23.15",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.67.0",
     "vite": "^7.2.6"

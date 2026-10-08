@@ -3,6 +3,12 @@ productName: AutoTools
 directories:
   buildResources: build
 files:
+  - '!tests/**'
+  - '!test-results/**'
+  - '!docs/**'
+  - '!.test-build/**'
+  - '!OpenHarmony*.p12'
+  - '!OpenHarmonyProfile*.pem'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'

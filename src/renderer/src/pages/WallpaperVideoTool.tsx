@@ -22,6 +22,7 @@ export default function WallpaperVideoTool() {
   const [dateStart, setDateStart] = useState('')
   const [dateEnd, setDateEnd] = useState(todayStr)
   const [videos, setVideos] = useState<Video[]>([])
+  const [scanId, setScanId] = useState('')
   const [scanning, setScanning] = useState(false)
   const [moving, setMoving] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -71,9 +72,12 @@ export default function WallpaperVideoTool() {
     }
 
     try {
-      const result = await window.api.file.scanVideos(source, dateRange)
-      setVideos(result)
-      log(`扫描完成，找到 ${result.length} 个视频文件`)
+      const result = await window.api.agent.execute('video.scan', { sourceDir: source, dateRange })
+      if (result.status !== 'succeeded') throw new Error(result.summary)
+      const found = result.data as { id: string; files: Video[] }
+      setScanId(found.id)
+      setVideos(found.files)
+      log(`扫描完成，找到 ${found.files.length} 个视频文件`)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       error(`扫描失败: ${msg}`)
@@ -93,9 +97,25 @@ export default function WallpaperVideoTool() {
       return
     }
     setMoving(true)
-    log(`开始移动 ${videos.length} 个文件到: ${target}`)
+    log(`准备移动 ${videos.length} 个文件到: ${target}，等待确认`)
     try {
-      const result = await window.api.file.moveVideos(videos, target)
+      const outcome = await window.api.agent.execute('video.move', {
+        scanId,
+        fileIds: [],
+        targetDir: target
+      })
+      const data = outcome.data as
+        | {
+            moved?: { source: string; destination: string }[]
+            failed?: { source: string; error: string }[]
+          }
+        | undefined
+      const result = {
+        success: outcome.status === 'succeeded',
+        moved: data?.moved ?? [],
+        failed: (data?.failed ?? []).map((item) => ({ path: item.source, error: item.error }))
+      }
+      log(outcome.summary)
       if (result.success) {
         log(`移动完成，成功: ${result.moved.length} 个`)
         result.moved.forEach((name) => log(`  ✓ ${name}`))
@@ -227,9 +247,7 @@ export default function WallpaperVideoTool() {
             <div>
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <h6 className="mb-0">扫描结果（{videos.length} 个视频）</h6>
-                <small className="text-secondary">
-                  总计 {formatSize(totalSize)}
-                </small>
+                <small className="text-secondary">总计 {formatSize(totalSize)}</small>
               </div>
               <div className="border rounded overflow-auto" style={{ maxHeight: 320 }}>
                 <Table size="sm" variant="dark" striped hover className="mb-0">
@@ -238,7 +256,9 @@ export default function WallpaperVideoTool() {
                       <th style={{ width: '40%' }}>文件名</th>
                       <th style={{ width: '20%' }}>来源子目录</th>
                       <th style={{ width: '25%' }}>下载时间</th>
-                      <th className="text-end" style={{ width: '15%' }}>大小</th>
+                      <th className="text-end" style={{ width: '15%' }}>
+                        大小
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -246,7 +266,9 @@ export default function WallpaperVideoTool() {
                       <tr key={v.path}>
                         <td className="font-monospace text-break">{v.name}</td>
                         <td className="text-secondary">{v.fromSubfolder}</td>
-                        <td className="text-secondary font-monospace">{formatDate(v.folderMtime)}</td>
+                        <td className="text-secondary font-monospace">
+                          {formatDate(v.folderMtime)}
+                        </td>
                         <td className="text-end font-monospace">{formatSize(v.size)}</td>
                       </tr>
                     ))}

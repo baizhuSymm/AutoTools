@@ -1,58 +1,59 @@
 import { BrowserWindow, app, shell } from 'electron'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import icon from '../../resources/AppIcon.png?asset'
-import { registerFileIpc } from './ipc/fileIpc'
-import { registerHdcIpc } from './ipc/hdcIpc'
-import { registerChromeIpc } from './ipc/chromeIpc'
+import { registerAgentIpc } from './ipc/agentIpc'
+
+app.setName('AutoTools')
+if (process.env['AUTOTOOLS_USER_DATA']) app.setPath('userData', process.env['AUTOTOOLS_USER_DATA'])
 
 let mainWindow: BrowserWindow | null = null
-
+let shutdown: (() => Promise<void>) | undefined
+let exiting = false
 function getPreloadPath(): string {
   return join(__dirname, '../preload/index.js')
 }
-
 function getRendererURL(): string {
   const isDev = !app.isPackaged
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
-    return process.env['ELECTRON_RENDERER_URL']
+    return new URL(process.env['ELECTRON_RENDERER_URL']).href
   }
-  return join(__dirname, '../renderer/index.html')
+  return pathToFileURL(join(__dirname, '../renderer/index.html')).href
 }
-
 function createMainWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 720,
+    width: 1280,
+    height: 820,
+    minWidth: 700,
+    minHeight: 560,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    title: 'AutoTools',
+    icon,
     webPreferences: {
       preload: getPreloadPath(),
       sandbox: false
     }
   })
-
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
   })
-
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    if (/^https?:\/\//i.test(details.url)) void shell.openExternal(details.url)
     return { action: 'deny' }
   })
-
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url.split('#')[0] !== getRendererURL().split('#')[0]) event.preventDefault()
+  })
   mainWindow.loadURL(getRendererURL())
-
   mainWindow.on('closed', () => {
     mainWindow = null
   })
 }
-
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   if (process.platform === 'win32') {
     app.setAppUserModelId(app.isPackaged ? 'com.electron.auto-tools' : process.execPath)
   }
-
   // F12 切换 DevTools；打包后禁用 Ctrl+R 刷新
   app.on('browser-window-created', (_, window) => {
     window.webContents.on('before-input-event', (event, input) => {
@@ -69,18 +70,27 @@ app.whenReady().then(() => {
       }
     })
   })
-
-  registerFileIpc()
-  registerHdcIpc()
-  registerChromeIpc()
+  const agent = await registerAgentIpc((event) =>
+    Boolean(
+      mainWindow &&
+      event.sender === mainWindow.webContents &&
+      event.senderFrame === event.sender.mainFrame &&
+      event.senderFrame?.url.split('#')[0] === getRendererURL().split('#')[0]
+    )
+  )
+  shutdown = agent.shutdown
   console.log('[main] ipc handlers registered')
   createMainWindow()
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
   })
 })
-
+app.on('before-quit', (event) => {
+  if (exiting || !shutdown) return
+  event.preventDefault()
+  exiting = true
+  void shutdown().finally(() => app.quit())
+})
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()

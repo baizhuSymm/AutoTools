@@ -7,6 +7,8 @@ out
 
 .idea/
 *.tsbuildinfo
+.test-build/
+test-results/
 
 # HarmonyOS signing credentials (never commit)
 OpenHarmony*.p12

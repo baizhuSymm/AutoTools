@@ -1,50 +1,99 @@
-﻿import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Button, Popconfirm, Tooltip } from 'antd'
+import { Bot, Bug, Film, MessageSquare, Plus, Settings, Terminal, Trash2 } from 'lucide-react'
+import { useAgent } from '../features/agent/context'
 
-export interface NavItem {
-  id: string
-  name: string
-  path: string
-}
-
-const navItems: NavItem[] = [
-  { id: 'wallpaper', name: '视频提取', path: '/wallpaper' },
-  { id: 'hdc-devtools', name: 'HDC DevTools', path: '/hdc-devtools' },
-  { id: 'crash-monitor', name: '闪退监控', path: '/crash-monitor' }
+const navItems = [
+  { name: '对话', path: '/chat', icon: MessageSquare },
+  { name: '视频提取', path: '/wallpaper', icon: Film },
+  { name: 'WebView 调试', path: '/hdc-devtools', icon: Terminal },
+  { name: '闪退监控', path: '/crash-monitor', icon: Bug }
 ]
 
 export default function Layout() {
+  const { snapshot, selectedId, select, report } = useAgent()
+  const navigate = useNavigate()
   return (
-    <div className="d-flex h-100">
-      {/* 侧边栏 */}
-      <aside
-        className="d-flex flex-column border-end border-secondary bg-body-tertiary"
-        style={{ width: 'var(--sidebar-width)', flexShrink: 0 }}
-      >
-        <div className="px-3 py-3 border-bottom border-secondary">
-          <span className="fw-semibold">Auto Tools</span>
+    <div className="agent-shell">
+      <aside className="app-sidebar">
+        <div className="app-brand">
+          <Bot size={24} />
+          <span>AutoTools</span>
+          <span className="brand-label">Agent</span>
         </div>
-        <nav className="flex-grow-1 overflow-auto py-2">
-          {navItems.map((item) => (
+        <nav className="primary-nav">
+          {navItems.map(({ name, path, icon: Icon }) => (
             <NavLink
-              key={item.id}
-              to={item.path}
-              className={({ isActive }) =>
-                `d-block px-3 py-2 text-decoration-none small ${
-                  isActive ? 'bg-primary text-white' : 'text-body-secondary hover-bg'
-                }`
-              }
+              key={path}
+              to={path}
+              className={({ isActive }) => (isActive ? 'nav-entry active' : 'nav-entry')}
             >
-              {item.name}
+              <Icon size={17} />
+              <span>{name}</span>
             </NavLink>
           ))}
         </nav>
-        <div className="px-3 py-2 border-top border-secondary text-secondary small">
-          v1.0.0
+        <div className="session-heading">
+          <span>会话</span>
+          <Tooltip title="新建会话">
+            <Button
+              type="text"
+              size="small"
+              aria-label="新建会话"
+              icon={<Plus size={17} />}
+              onClick={() => {
+                void window.api.agent
+                  .createSession()
+                  .then((id) => {
+                    select(id)
+                    navigate('/chat')
+                  })
+                  .catch(report)
+              }}
+            />
+          </Tooltip>
         </div>
+        <div className="session-list">
+          {snapshot.conversations.map((session) => (
+            <div
+              key={session.id}
+              className={`session-entry ${selectedId === session.id ? 'selected' : ''}`}
+            >
+              <button
+                className="session-select"
+                title={session.title}
+                onClick={() => {
+                  select(session.id)
+                  navigate('/chat')
+                }}
+              >
+                {snapshot.activeSessionId === session.id && <span className="run-indicator" />}
+                {session.title}
+              </button>
+              <Popconfirm
+                title="删除这段会话？"
+                description="运行中的监控任务会保留。"
+                onConfirm={() => window.api.agent.deleteSession(session.id).catch(report)}
+              >
+                <Button
+                  type="text"
+                  size="small"
+                  aria-label="删除会话"
+                  icon={<Trash2 size={13} />}
+                />
+              </Popconfirm>
+            </div>
+          ))}
+        </div>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) => `nav-entry settings-entry ${isActive ? 'active' : ''}`}
+        >
+          <Settings size={17} />
+          <span>模型设置</span>
+        </NavLink>
       </aside>
-
-      {/* 内容区 */}
-      <main className="flex-grow-1 overflow-auto">
+      <main className="app-main">
         <Outlet />
       </main>
     </div>

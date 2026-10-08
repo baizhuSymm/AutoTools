@@ -13,7 +13,9 @@ export interface DeviceStatusPanelProps {
   pollInterval?: number
 }
 
-export default function DeviceStatusPanel({ pollInterval = POLL_INTERVAL_MS }: DeviceStatusPanelProps) {
+export default function DeviceStatusPanel({
+  pollInterval = POLL_INTERVAL_MS
+}: DeviceStatusPanelProps) {
   const [devices, setDevices] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,15 +26,12 @@ export default function DeviceStatusPanel({ pollInterval = POLL_INTERVAL_MS }: D
     setLoading(true)
     setError(null)
     try {
-      const result = await window.api.hdc.exec(['list', 'targets'])
-      if (result.code === 0) {
-        const list = result.stdout
-          .split(/\r?\n/)
-          .map((s) => s.trim())
-          .filter(Boolean)
+      const result = await window.api.agent.execute('device.list', {})
+      if (result.status === 'succeeded') {
+        const list = result.data as string[]
         setDevices(list)
       } else {
-        setError(result.stderr.trim() || `hdc 退出码 ${result.code}`)
+        setError(result.summary)
         setDevices([])
       }
     } catch (e) {
@@ -80,7 +79,9 @@ export default function DeviceStatusPanel({ pollInterval = POLL_INTERVAL_MS }: D
           disabled={loading}
           title="刷新"
         >
-          <i className={`bi bi-arrow-clockwise ${loading ? 'spinner-border spinner-border-sm' : ''}`} />
+          <i
+            className={`bi bi-arrow-clockwise ${loading ? 'spinner-border spinner-border-sm' : ''}`}
+          />
         </Button>
       </Card.Header>
       <Card.Body>
@@ -113,10 +114,7 @@ export default function DeviceStatusPanel({ pollInterval = POLL_INTERVAL_MS }: D
         {devices.length > 0 && (
           <ListGroup variant="flush" className="mb-2">
             {devices.map((id) => (
-              <ListGroup.Item
-                key={id}
-                className="d-flex align-items-center px-0 py-2 small"
-              >
+              <ListGroup.Item key={id} className="d-flex align-items-center px-0 py-2 small">
                 <span
                   className="bg-success rounded-circle me-2 flex-shrink-0"
                   style={{ width: 8, height: 8 }}
