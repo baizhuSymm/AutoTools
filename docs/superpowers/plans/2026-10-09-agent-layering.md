@@ -240,8 +240,8 @@ assert.equal(diagnostics.join('').includes('fake-secret'), false)
 - [x] 执行 `rg -n 'AgentRuntime|JsonStore|agent/runtime|storage/store' src tests`，要求无旧实现依赖；检查 IPC 不 import Runner/Repository/storage，Repository 不 import services，Runner 不 import Electron/storage/services。
 - [x] 运行全套单元测试、两端 tsc、ESLint 和 electron-vite build，全部 exit 0。执行开发版及生产构建 Electron smoke，再 `electron-builder --win --dir`，使用 AUTOTOOLS_SMOKE_EXECUTABLE 对打包版运行完整 smoke，证明 ESM 库在真实 Electron 里可加载。
 - [x] 编写中文调用路径指南：`Send IPC -> ChatService.send -> SessionService.beginTurn -> AgentRunner.run -> ToolService.executeForTurn -> Repository -> SnapshotService`，包含文件索引、读取/修改状态的边界和迁移失败说明。README 标明存储文件和真实 provider/device 未验证边界，不改现状文档冒充目标已完成。
-- [ ] 独立审查整个分支，处理确认问题并复跑受影响验证；执行 `git diff --check`，确认无密钥、用户配置、签名文件或构建产物进入暂存区，提交 `refactor: wire layered agent application and retire runtime`。
-- [ ] 启动或复用实际开发服务，报告 URL 和 desktop 启动情况；推送 `codex/agent-layering` 并用远程 SHA 验证。保留分支，不在此计划中自动合并 main。
+- [x] 独立审查整个分支，处理确认问题并复跑受影响验证；执行 `git diff --check`，确认无密钥、用户配置、签名文件或构建产物进入暂存区，提交 `refactor: wire layered agent application and retire runtime`。
+- [x] 启动或复用实际开发服务，报告 URL 和 desktop 启动情况；推送 `codex/agent-layering` 并用远程 SHA 验证。保留分支，不在此计划中自动合并 main。
 
 ## 执行记录
 
