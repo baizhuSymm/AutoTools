@@ -13,50 +13,14 @@ import type { JsonStore } from '../storage/store'
 import { parsePersisted } from '../storage/schema'
 import { ReasoningSplitter, type ReasoningPart } from '../../shared/reasoning'
 
-export interface ModelCall {
-  id: string
-  name: string
-  args: Record<string, unknown>
-}
-export interface WireMessage {
-  role: 'user' | 'assistant' | 'tool'
-  content: string
-  reasoning?: string
-  tool_calls?: ModelCall[]
-  tool_call_id?: string
-}
-export type ModelEvent =
-  { type: 'text' | 'reasoning'; text: string } | { type: 'calls'; calls: ModelCall[] }
-export interface ModelAdapter {
-  stream(
-    messages: WireMessage[],
-    definitions: ToolDefinition[],
-    signal: AbortSignal
-  ): AsyncIterable<ModelEvent>
-}
-interface SecretVault {
-  encrypt: (key: string) => string | null
-  decrypt: (value: string) => string
-}
-export interface PersistedState {
-  version: number
-  conversations: Conversation[]
-  history: Record<string, WireMessage[][]>
-  tasks: MonitorTask[]
-  calls?: ToolCall[]
-  config: Omit<ModelConfig, 'hasKey' | 'keyPersistent'>
-  encryptedKey?: string
-}
-
-export function boundedHistory(turns: WireMessage[][], current: string): WireMessage[] {
-  const user: WireMessage = { role: 'user', content: current }
-  if (Buffer.byteLength(JSON.stringify([user])) > 60000) throw new Error('消息过长，请缩短后发送')
-  const retained = turns.slice(-20).map((turn) => structuredClone(turn))
-  while (retained.length && Buffer.byteLength(JSON.stringify([...retained.flat(), user])) > 60000)
-    retained.shift()
-  return [...retained.flat(), user]
-}
-
+import type { ModelAdapter, ModelCall, WireMessage, SecretVault } from './contracts'
+export type { ModelAdapter, ModelEvent, ModelCall, WireMessage } from './contracts'
+export type { LegacyState as PersistedState } from '../storage/schema'
+import type { LegacyState as PersistedState } from '../storage/schema'
+import { boundedHistory } from './history'
+export { boundedHistory } from './history'
+import { summarizeResult } from './toolSummary'
+export { summarizeResult } from './toolSummary'
 export class AgentRuntime {
   private conversations: Conversation[] = []
   private history: Record<string, WireMessage[][]> = {}
@@ -479,51 +443,3 @@ export class AgentRuntime {
   }
 }
 
-export function summarizeResult(result: ToolResult): string {
-  const body = JSON.stringify(result)
-  if (Buffer.byteLength(body) <= 8192) return body
-  const data: Record<string, unknown> = {}
-  if (result.data && typeof result.data === 'object') {
-    const original = result.data as Record<string, unknown>
-    for (const key of [
-      'id',
-      'taskId',
-      'deviceId',
-      'bundleName',
-      'status',
-      'total',
-      'count',
-      'offset',
-      'nextOffset'
-    ]) {
-      const value = original[key]
-      if (typeof value === 'string') data[key] = value.slice(0, 128)
-      else if (typeof value === 'number' || value === null) data[key] = value
-    }
-    if (Array.isArray(original.files)) {
-      data.files = original.files.slice(0, 10).map((file: Record<string, unknown>) => ({
-        id: String(file.id).slice(0, 128),
-        name: String(file.name).slice(0, 200),
-        size: typeof file.size === 'number' ? file.size : undefined
-      }))
-      data.count = original.files.length
-      if (typeof original.offset === 'number')
-        data.nextOffset = original.offset + Math.min(10, original.files.length)
-      data.more = '使用 video.results 查询扫描记录的分页清单'
-    }
-  }
-  const summarized = {
-    status: result.status,
-    summary: result.summary.slice(0, 512),
-    truncated: true,
-    data
-  }
-  let encoded = JSON.stringify(summarized)
-  const files = data.files as unknown[] | undefined
-  while (Buffer.byteLength(encoded) > 8192 && files && files.length > 1) {
-    files.pop()
-    if (typeof data.offset === 'number') data.nextOffset = data.offset + files.length
-    encoded = JSON.stringify(summarized)
-  }
-  return encoded
-}

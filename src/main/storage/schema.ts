@@ -1,5 +1,30 @@
 import { z } from 'zod'
-import type { PersistedState } from '../agent/runtime'
+import type { Conversation, ModelConfig, MonitorTask, ToolCall } from '../../shared/agent'
+import type { HistoryTurns } from '../agent/contracts'
+
+export type StoredConfig = Omit<ModelConfig, 'hasKey' | 'keyPersistent'>
+export interface AgentData {
+  version: 1
+  conversations: Conversation[]
+  history: Record<string, HistoryTurns>
+  calls: ToolCall[]
+  tasks: MonitorTask[]
+}
+export interface MigrationRecord {
+  kind: 'fresh' | 'legacy'
+  sourceHash?: string
+  backupPath?: string
+}
+export interface SettingsData {
+  version: 1
+  config: StoredConfig
+  encryptedKey?: string
+  migration?: MigrationRecord
+}
+export interface LegacyState extends AgentData {
+  config: StoredConfig
+  encryptedKey?: string
+}
 
 const result = z.object({
   status: z.enum(['succeeded', 'partial', 'failed', 'cancelled', 'rejected']),
@@ -92,6 +117,16 @@ const state = z.object({
   encryptedKey: z.string().optional()
 })
 
-export function parsePersisted(input: unknown): PersistedState {
+export function parseLegacy(input: unknown): LegacyState {
   return state.parse(input)
+}
+
+export const parsePersisted = parseLegacy
+export function parseAgentData(input: unknown): AgentData {
+  return state.omit({ config: true, encryptedKey: true }).parse(input)
+}
+export function parseSettings(input: unknown): SettingsData {
+  return state.pick({ version: true, config: true, encryptedKey: true }).extend({
+    migration: z.object({ kind: z.enum(['fresh', 'legacy']), sourceHash: z.string().optional(), backupPath: z.string().optional() }).optional()
+  }).parse(input)
 }
