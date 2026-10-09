@@ -55,6 +55,7 @@ export class AgentRuntime {
         version: 1,
         conversations: [],
         history: {},
+        calls: [],
         tasks: [],
         config: { baseURL: '', model: '' }
       },
