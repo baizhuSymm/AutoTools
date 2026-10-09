@@ -7,7 +7,12 @@ export function recoverAgentData(input: AgentData): AgentData {
     if (message.status === 'streaming') message.status = 'cancelled'
     if (message.reasoningStatus === 'streaming') message.reasoningStatus = 'interrupted'
   }
-  for (const call of [...state.calls, ...state.conversations.flatMap((session) => session.messages.flatMap((message) => message.calls))]) {
+  for (const call of [
+    ...state.calls,
+    ...state.conversations.flatMap((session) =>
+      session.messages.flatMap((message) => message.calls)
+    )
+  ]) {
     delete call.confirmationId
     if (['validating', 'executing', 'awaiting_confirmation'].includes(call.status)) {
       call.status = 'cancelled'
@@ -16,7 +21,13 @@ export function recoverAgentData(input: AgentData): AgentData {
   }
   state.tasks = state.tasks.map((task) => {
     const interrupted = ['running', 'starting', 'stopping'].includes(task.status)
-    return { ...task, events: [], canStop: false, status: interrupted ? 'failed' : task.status, reason: interrupted ? '应用已退出，任务已中断' : task.reason }
+    return {
+      ...task,
+      events: [],
+      canStop: false,
+      status: interrupted ? 'failed' : task.status,
+      reason: interrupted ? '应用已退出，任务已中断' : task.reason
+    }
   })
   return state
 }

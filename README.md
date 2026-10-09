@@ -29,7 +29,10 @@ tool-call test. Manual tools work without a model connection.
 Conversation content and limited tool-result summaries are sent to the configured provider.
 Continuous device logs and full video lists are retained locally. Keys use Electron's system
 encryption; when encryption is unavailable, keys last only for the current process.
-Conversations and final task metadata live in `agent-state.json` under Electron's user data directory.
+Conversations and final task metadata live in `agent-data.json` (lowdb) under Electron's user data directory.
+Model configuration and encrypted keys live in `agent-settings.json` (electron-store).
+The old `agent-state.json` is migrated once and retained with an original-byte backup; damaged or
+incomplete migration records are never silently overwritten. See the [layered architecture guide](docs/agent-layering-guide.md).
 Set `AUTOTOOLS_USER_DATA` to an existing absolute directory to use a separate profile.
 
 Video date filters use source subdirectory modification time, matching the original tool.
@@ -84,6 +87,7 @@ Screenshots are written to the ignored `test-results/` directory. It does not ca
 or change a real device. Real-device and provider compatibility still require separate validation.
 The smoke also checks rich Markdown, highlighted literal think tags in code, reasoning-field streaming,
 thinking cancellation/reload, answer copying, safe links/HTML/images and narrow-window rendering.
+It also migrates a legacy profile and performs a real application restart to verify library-backed persistence.
 
 Design: [Agent specification](docs/superpowers/specs/2026-10-08-local-tool-agent-design.md).
 Implementation: [Execution plan](docs/superpowers/plans/2026-10-08-local-tool-agent.md).

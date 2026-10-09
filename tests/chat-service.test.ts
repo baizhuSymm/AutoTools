@@ -22,11 +22,51 @@ test('deleting active approval cancels, waits and clears execution state', async
   const { database, settings } = await prepareStorage(dir, fileSettings)
   const persistence = new PersistenceCoordinator(database, () => {})
   const executions = new ExecutionRepository(database)
-  const sessions = new SessionService(new SessionRepository(database), executions, persistence, () => {})
-  const config = new ModelConfigService(new ConfigRepository(settings), { encrypt: () => null, decrypt: () => '' }, async () => ({ text: true, streaming: true, tools: true }), () => false, () => {})
+  const sessions = new SessionService(
+    new SessionRepository(database),
+    executions,
+    persistence,
+    () => {}
+  )
+  const config = new ModelConfigService(
+    new ConfigRepository(settings),
+    { encrypt: () => null, decrypt: () => '' },
+    async () => ({ text: true, streaming: true, tools: true }),
+    () => false,
+    () => {}
+  )
   let effects = 0
-  const tools = new ToolService(new ToolExecutor([{ name: 'write', description: '', confirm: true, schema: z.object({}), prepare: async () => ({ title: '', details: {}, data: {} }), execute: async () => { effects++; return { status: 'succeeded', summary: '' } } }]), executions, persistence, () => {})
-  const chat = new ChatService(sessions, config, tools, new AgentRunner(), () => ({ async *stream() { yield { type: 'calls', calls: [{ id: 'c', name: 'write', args: {} }] } } }), persistence, () => {})
+  const tools = new ToolService(
+    new ToolExecutor([
+      {
+        name: 'write',
+        description: '',
+        confirm: true,
+        schema: z.object({}),
+        prepare: async () => ({ title: '', details: {}, data: {} }),
+        execute: async () => {
+          effects++
+          return { status: 'succeeded', summary: '' }
+        }
+      }
+    ]),
+    executions,
+    persistence,
+    () => {}
+  )
+  const chat = new ChatService(
+    sessions,
+    config,
+    tools,
+    new AgentRunner(),
+    () => ({
+      async *stream() {
+        yield { type: 'calls', calls: [{ id: 'c', name: 'write', args: {} }] }
+      }
+    }),
+    persistence,
+    () => {}
+  )
   try {
     config.initialize()
     await config.save({ baseURL: 'https://example.com/v1', model: 'test', key: 'fake' })
@@ -42,5 +82,10 @@ test('deleting active approval cancels, waits and clears execution state', async
     assert.equal(sessions.list().length, 0)
     assert.equal(effects, 0)
     assert.throws(() => tools.confirm(confirmation, true))
-  } finally { await chat.close(); await tools.close(); persistence.dispose(); await rm(dir, { recursive: true, force: true }) }
+  } finally {
+    await chat.close()
+    await tools.close()
+    persistence.dispose()
+    await rm(dir, { recursive: true, force: true })
+  }
 })

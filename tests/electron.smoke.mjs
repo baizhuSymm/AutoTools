@@ -15,6 +15,43 @@ await mkdir(join(source, 'wallpaper'), { recursive: true })
 await writeFile(join(source, 'wallpaper', 'sample.mp4'), 'test-video')
 await mkdir('test-results', { recursive: true })
 const errors = []
+const legacyState = {
+  version: 1,
+  config: { baseURL: '', model: '' },
+  history: {},
+  tasks: [],
+  calls: [
+    {
+      id: 'old-call',
+      scope: 'old',
+      name: 'write',
+      title: 'write',
+      status: 'awaiting_confirmation',
+      confirmationId: 'expired'
+    }
+  ],
+  conversations: [
+    {
+      id: 'old',
+      title: '旧会话',
+      updatedAt: 1,
+      messages: [
+        {
+          id: 'old-message',
+          role: 'assistant',
+          content: '',
+          reasoning: '旧思考片段',
+          reasoningStatus: 'streaming',
+          status: 'streaming',
+          calls: [],
+          createdAt: 1
+        }
+      ]
+    }
+  ]
+}
+const legacyRaw = JSON.stringify(legacyState)
+await writeFile(join(profile, 'agent-state.json'), legacyRaw)
 const richAnswer =
   '<think>先核对目录，再整理结果。</think>\n\n## 处理结果\n\n已完成 **扫描**，可以继续操作。\n\n| 文件 | 状态 |\n| --- | --- |\n| 示例.mp4 | 已发现 |\n\n> 文件操作仍需确认。\n\n```typescript\nconst value = "<think>literal</think>";\nconsole.log(value);\n```\n\n[安全链接](https://example.com)\n\n[危险链接](javascript:alert(1))\n\n![远程图片](https://example.com/private-image.png)\n\n<script>window.__unsafe = true</script>'
 const server = createServer(async (request, response) => {
@@ -121,21 +158,33 @@ await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 let app
 try {
   const address = server.address()
-  app = await electron.launch({
-    executablePath: process.env.AUTOTOOLS_SMOKE_EXECUTABLE || electronPath,
-    args: process.env.AUTOTOOLS_SMOKE_EXECUTABLE ? [] : [resolve('.')],
-    env: {
-      ...process.env,
-      AUTOTOOLS_USER_DATA: profile,
-      ELECTRON_RUN_AS_NODE: undefined,
-      ELECTRON_RENDERER_URL: process.env.AUTOTOOLS_SMOKE_RENDERER_URL
-    }
-  })
-  const page = await app.firstWindow()
+  const launch = () =>
+    electron.launch({
+      executablePath: process.env.AUTOTOOLS_SMOKE_EXECUTABLE || electronPath,
+      args: process.env.AUTOTOOLS_SMOKE_EXECUTABLE ? [] : [resolve('.')],
+      env: {
+        ...process.env,
+        AUTOTOOLS_USER_DATA: profile,
+        ELECTRON_RUN_AS_NODE: undefined,
+        ELECTRON_RENDERER_URL: process.env.AUTOTOOLS_SMOKE_RENDERER_URL
+      }
+    })
+  app = await launch()
+  let page = await app.firstWindow()
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
   })
+  await page.getByRole('heading', { name: '旧会话', exact: true }).waitFor()
+  const restoredLegacy = await page.evaluate(() => window.api.agent.snapshot())
+  assert.equal(restoredLegacy.conversations[0].messages[0].status, 'cancelled')
+  assert.equal(restoredLegacy.conversations[0].messages[0].reasoningStatus, 'interrupted')
+  assert.equal(restoredLegacy.calls[0].confirmationId, undefined)
+  assert.equal(
+    await readFile(join(profile, 'agent-state.json.pre-layering.bak'), 'utf8'),
+    legacyRaw
+  )
+  await page.getByRole('button', { name: '新建会话', exact: true }).click()
   await page.getByRole('heading', { name: '新会话', exact: true }).waitFor()
   await page.screenshot({ path: 'test-results/chat-desktop.png' })
   await page.getByRole('link', { name: '模型设置', exact: true }).click()
@@ -172,16 +221,23 @@ try {
   assert.equal(await richMessage.locator('a[href^="javascript:"]').count(), 0)
   assert.equal(await richMessage.locator('img').count(), 0)
   assert.equal(await page.evaluate(() => window.__unsafe), undefined)
-  await richMessage.locator('.message-actions').getByRole('button', { name: '复制', exact: true }).click()
+  await richMessage
+    .locator('.message-actions')
+    .getByRole('button', { name: '复制', exact: true })
+    .click()
   await richMessage.locator('.message-actions button[class*="copy-success"]').waitFor()
   const copied = await app.evaluate(({ clipboard }) => clipboard.readText())
   assert.ok(copied.includes('## 处理结果'))
   assert.ok(!copied.includes('先核对目录'))
   await page.screenshot({ path: 'test-results/chat-rich-desktop.png', animations: 'disabled' })
-  await app.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].setSize(760, 640) })
+  await app.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0].setSize(760, 640)
+  })
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
   await page.screenshot({ path: 'test-results/chat-rich-narrow.png', animations: 'disabled' })
-  await app.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].setSize(1280, 820) })
+  await app.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0].setSize(1280, 820)
+  })
   await send('独立思考测试')
   await page.getByRole('heading', { name: '最终答复', exact: true }).waitFor()
   await page.waitForFunction(
@@ -254,8 +310,23 @@ try {
   await page.screenshot({ path: 'test-results/chat-narrow.png' })
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
   assert.deepEqual(errors, [])
-  const saved = await readFile(join(profile, 'agent-state.json'), 'utf8')
+  const saved = await readFile(join(profile, 'agent-data.json'), 'utf8')
   assert.ok(!saved.includes('smoke-secret'))
+  const settings = await readFile(join(profile, 'agent-settings.json'), 'utf8')
+  assert.ok(!settings.includes('smoke-secret'))
+  assert.equal(JSON.parse(settings).migration.kind, 'legacy')
+  await app.close()
+  app = await launch()
+  page = await app.firstWindow()
+  await page.getByRole('heading', { name: '富文本测试', exact: true }).waitFor()
+  const restarted = await page.evaluate(() => window.api.agent.snapshot())
+  assert.equal(restarted.conversations[0].messages.at(-1).status, 'completed')
+  assert.equal(
+    restarted.calls.find((call) => call.name === 'video.move' && call.status === 'succeeded').result
+      .status,
+    'succeeded'
+  )
+  assert.equal(await readFile(join(profile, 'agent-state.json'), 'utf8'), legacyRaw)
   console.log(
     'Electron smoke passed: approval, actual move, Markdown, code, Think tags, native reasoning, cancellation, copying, safe rendering, reload, manual routes, narrow layout.'
   )

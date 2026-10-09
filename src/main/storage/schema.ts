@@ -121,12 +121,20 @@ export function parseLegacy(input: unknown): LegacyState {
   return state.parse(input)
 }
 
-export const parsePersisted = parseLegacy
 export function parseAgentData(input: unknown): AgentData {
   return state.omit({ config: true, encryptedKey: true }).parse(input)
 }
 export function parseSettings(input: unknown): SettingsData {
-  return state.pick({ version: true, config: true, encryptedKey: true }).extend({
-    migration: z.object({ kind: z.enum(['fresh', 'legacy']), sourceHash: z.string().optional(), backupPath: z.string().optional() }).optional()
-  }).parse(input)
+  return state
+    .pick({ version: true, config: true, encryptedKey: true })
+    .extend({
+      migration: z
+        .object({
+          kind: z.enum(['fresh', 'legacy']),
+          sourceHash: z.string().optional(),
+          backupPath: z.string().optional()
+        })
+        .optional()
+    })
+    .parse(input)
 }

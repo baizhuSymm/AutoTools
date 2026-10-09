@@ -1,16 +1,13 @@
+import { createTestAgent, testFiles } from './helpers/agentFixture'
+import type { ModelAdapter, WireMessage } from '../src/main/agent/contracts'
+import { boundedHistory } from '../src/main/agent/history'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { z } from 'zod'
-import {
-  AgentRuntime,
-  boundedHistory,
-  type ModelAdapter,
-  type WireMessage
-} from '../src/main/agent/runtime'
-import { JsonStore } from '../src/main/storage/store'
+
 import { ToolExecutor } from '../src/main/tools/executor'
 
 test('fake model requests flow through actual approval executor and persist a completed turn', async () => {
@@ -37,29 +34,37 @@ test('fake model requests flow through actual approval executor and persist a co
       else yield { type: 'text', text: 'completed' }
     }
   }
-  const runtime = new AgentRuntime(
-    new JsonStore(join(dir, 'state.json')),
+  const runtime = await createTestAgent(
+    testFiles(join(dir, 'agent-state.json')),
     executor,
     () => model,
     { encrypt: () => null, decrypt: () => '' },
     () => {}
   )
   try {
-    await runtime.init()
-    await runtime.saveConfig({ baseURL: 'https://example.com/v1', model: 'model', key: 'secret' })
-    runtime.setCapabilities({ text: true, streaming: true, tools: true })
-    const id = await runtime.createSession()
-    const running = runtime.send(id, 'write')
+    await runtime.services.config.save({
+      baseURL: 'https://example.com/v1',
+      model: 'model',
+      key: 'secret'
+    })
+    await runtime.services.config.setCapabilities({ text: true, streaming: true, tools: true })
+    const id = await runtime.services.sessions.create()
+    const running = runtime.services.chat.send(id, 'write')
     await new Promise((resolve) => setTimeout(resolve, 10))
     assert.equal(effects, 0)
-    assert.throws(() => runtime.send(id, 'duplicate'))
-    const call = runtime.snapshot().calls.find((item) => item.confirmationId)!
-    runtime.confirm(call.confirmationId!, true)
+    assert.throws(() => runtime.services.chat.send(id, 'duplicate'))
+    const call = runtime.services.snapshots.snapshot().calls.find((item) => item.confirmationId)!
+    runtime.services.tools.confirm(call.confirmationId!, true)
     await running
     assert.equal(effects, 1)
-    assert.equal(runtime.snapshot().conversations[0].messages.at(-1)?.content, 'completed')
-    assert.equal(runtime.snapshot().activeSessionId, null)
-    const persisted = await new JsonStore(join(dir, 'state.json')).load<Record<string, unknown>>({})
+    assert.equal(
+      runtime.services.snapshots.snapshot().conversations[0].messages.at(-1)?.content,
+      'completed'
+    )
+    assert.equal(runtime.services.snapshots.snapshot().activeSessionId, null)
+    const persisted = await testFiles(join(dir, 'agent-state.json')).load<Record<string, unknown>>(
+      {}
+    )
     assert.ok(!JSON.stringify(persisted).includes('secret'))
   } finally {
     await rm(dir, { recursive: true, force: true })
@@ -100,20 +105,19 @@ test('malformed model tool args cannot execute mutations', async () => {
       yield { type: 'calls', calls: [{ id: 'c', name: 'write', args: { value: 'invalid' } }] }
     }
   }
-  const runtime = new AgentRuntime(
-    new JsonStore(join(dir, 'state.json')),
+  const runtime = await createTestAgent(
+    testFiles(join(dir, 'agent-state.json')),
     executor,
     () => model,
     { encrypt: () => null, decrypt: () => '' },
     () => {}
   )
   try {
-    await runtime.init()
-    await runtime.saveConfig({ baseURL: 'https://example.com/v1', model: 'm', key: 'k' })
-    runtime.setCapabilities({ text: true, streaming: true, tools: true })
-    await runtime.send(await runtime.createSession(), 'run')
+    await runtime.services.config.save({ baseURL: 'https://example.com/v1', model: 'm', key: 'k' })
+    await runtime.services.config.setCapabilities({ text: true, streaming: true, tools: true })
+    await runtime.services.chat.send(await runtime.services.sessions.create(), 'run')
     assert.equal(effects, 0)
-    assert.ok(runtime.snapshot().calls.length <= 12)
+    assert.ok(runtime.services.snapshots.snapshot().calls.length <= 12)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

@@ -6,5 +6,13 @@ import type { SettingsBackendFactory } from '../../src/main/storage/settingsStor
 export const fileSettings: SettingsBackendFactory = async (directory) => {
   const path = join(directory, 'agent-settings.json')
   let data = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : {}
-  return { get store() { return structuredClone(data) }, set store(value) { writeFileSync(path, JSON.stringify(value)); data = structuredClone(value) } }
+  return {
+    get store() {
+      return structuredClone(data)
+    },
+    set store(value) {
+      writeFileSync(path, JSON.stringify(value))
+      data = structuredClone(value)
+    }
+  }
 }

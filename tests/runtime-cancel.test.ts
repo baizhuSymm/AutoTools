@@ -1,11 +1,12 @@
+import { createTestAgent, testFiles } from './helpers/agentFixture'
+import type { ModelAdapter } from '../src/main/agent/contracts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { z } from 'zod'
-import { AgentRuntime, type ModelAdapter } from '../src/main/agent/runtime'
-import { JsonStore } from '../src/main/storage/store'
+
 import { ToolExecutor } from '../src/main/tools/executor'
 
 test('rejecting a call stops later calls in the same model response', async () => {
@@ -43,21 +44,21 @@ test('rejecting a call stops later calls in the same model response', async () =
       }
     }
   }
-  const runtime = new AgentRuntime(
-    new JsonStore(join(directory, 'state.json')),
+  const runtime = await createTestAgent(
+    testFiles(join(directory, 'agent-state.json')),
     executor,
     () => model,
     { encrypt: () => null, decrypt: () => '' },
     () => {}
   )
   try {
-    await runtime.init()
-    await runtime.saveConfig({ baseURL: 'https://example.com/v1', model: 'm', key: 'k' })
-    runtime.setCapabilities({ text: true, streaming: true, tools: true })
-    const run = runtime.send(await runtime.createSession(), 'run')
+    await runtime.services.config.save({ baseURL: 'https://example.com/v1', model: 'm', key: 'k' })
+    await runtime.services.config.setCapabilities({ text: true, streaming: true, tools: true })
+    const run = runtime.services.chat.send(await runtime.services.sessions.create(), 'run')
     await new Promise((resolve) => setTimeout(resolve, 10))
-    runtime.confirm(
-      runtime.snapshot().calls.find((call) => call.confirmationId)!.confirmationId!,
+    runtime.services.tools.confirm(
+      runtime.services.snapshots.snapshot().calls.find((call) => call.confirmationId)!
+        .confirmationId!,
       false
     )
     await run

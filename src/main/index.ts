@@ -3,6 +3,12 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import icon from '../../resources/AppIcon.png?asset'
 import { registerAgentIpc } from './ipc/agentIpc'
+import { createApplication } from './bootstrap/createApplication'
+import { createSecretVault } from './infrastructure/secretVault'
+import { createSnapshotPublisher } from './infrastructure/snapshotPublisher'
+import { createModel, testModel } from './agent/model'
+import { MonitorManager } from './tasks/monitor'
+import { spawnHdcStream } from './services/hdcService'
 
 app.setName('AutoTools')
 if (process.env['AUTOTOOLS_USER_DATA']) app.setPath('userData', process.env['AUTOTOOLS_USER_DATA'])
@@ -70,7 +76,21 @@ app.whenReady().then(async () => {
       }
     })
   })
-  const agent = await registerAgentIpc((event) =>
+  const application = await createApplication({
+    userData: app.getPath('userData'),
+    vault: createSecretVault(),
+    modelFactory: createModel,
+    probe: testModel,
+    publish: createSnapshotPublisher(),
+    diagnose: (message) => console.error(message),
+    monitorFactory: (changed) =>
+      new MonitorManager(
+        (deviceId) =>
+          spawnHdcStream(['-t', deviceId, 'shell', 'hilog', '-T', 'faultlogger', '-T', 'AppMgr']),
+        changed
+      )
+  })
+  const unregister = registerAgentIpc(application.services, (event) =>
     Boolean(
       mainWindow &&
       event.sender === mainWindow.webContents &&
@@ -78,7 +98,10 @@ app.whenReady().then(async () => {
       event.senderFrame?.url.split('#')[0] === getRendererURL().split('#')[0]
     )
   )
-  shutdown = agent.shutdown
+  shutdown = async () => {
+    unregister()
+    await application.shutdown()
+  }
   console.log('[main] ipc handlers registered')
   createMainWindow()
   app.on('activate', () => {
@@ -89,7 +112,11 @@ app.on('before-quit', (event) => {
   if (exiting || !shutdown) return
   event.preventDefault()
   exiting = true
-  void shutdown().finally(() => app.quit())
+  void shutdown()
+    .catch((error: unknown) =>
+      console.error(error instanceof Error ? error.message : '应用退出失败')
+    )
+    .finally(() => app.quit())
 })
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

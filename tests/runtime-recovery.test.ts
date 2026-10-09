@@ -1,11 +1,13 @@
+import { createTestAgent, testFiles } from './helpers/agentFixture'
+import type { ModelAdapter } from '../src/main/agent/contracts'
+import { summarizeResult } from '../src/main/agent/toolSummary'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtemp, rm, writeFile, readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { z } from 'zod'
-import { AgentRuntime, summarizeResult, type ModelAdapter } from '../src/main/agent/runtime'
-import { JsonStore } from '../src/main/storage/store'
+
 import { ToolExecutor, type ToolDefinition } from '../src/main/tools/executor'
 
 async function fixture(run: (directory: string) => Promise<void>) {
@@ -69,16 +71,16 @@ test('shutdown waits for manual operation cleanup and persists its actual result
         return { status: 'partial', summary: 'cleanup complete' }
       })
     ])
-    const store = new JsonStore(join(dir, 'state.json'))
-    const runtime = new AgentRuntime(
+    const store = testFiles(join(dir, 'agent-state.json'))
+    const runtime = await createTestAgent(
       store,
       executor,
       () => noCalls,
       vault,
       () => {}
     )
-    await runtime.init()
-    const operation = runtime.execute('read', {})
+
+    const operation = runtime.services.tools.execute('read', {})
     await ready
     await runtime.shutdown()
     assert.equal(completed, true)
@@ -99,22 +101,23 @@ for (const invalid of [
 ]) {
   test(`invalid persisted structure ${invalid === null ? 'null' : 'nested'} keeps original backup and loads defaults`, async () =>
     fixture(async (dir) => {
-      const path = join(dir, 'state.json')
+      const path = join(dir, 'agent-state.json')
       const original = JSON.stringify(invalid)
       await writeFile(path, original)
-      const runtime = new AgentRuntime(
-        new JsonStore(path),
+      const runtime = await createTestAgent(
+        testFiles(path),
         new ToolExecutor([]),
         () => noCalls,
         vault,
         () => {}
       )
-      await runtime.init()
-      assert.equal(runtime.snapshot().conversations.length, 0)
-      assert.ok(runtime.snapshot().warning)
-      await runtime.createSession()
-      const backup = (await readdir(dir)).find((name) => name.includes('.corrupt-'))!
+
+      assert.equal(runtime.services.snapshots.snapshot().conversations.length, 0)
+      assert.ok(runtime.services.snapshots.snapshot().warning)
+      await assert.rejects(runtime.services.sessions.create())
+      const backup = (await readdir(dir)).find((name) => name.endsWith('.pre-layering.bak'))!
       assert.equal(await readFile(join(dir, backup), 'utf8'), original)
+      await assert.rejects(runtime.shutdown())
     }))
 }
 
@@ -129,21 +132,21 @@ test('deleting a conversation removes its global execution records', async () =>
         } else yield { type: 'text', text: 'done' }
       }
     }
-    const runtime = new AgentRuntime(
-      new JsonStore(join(dir, 'state.json')),
+    const runtime = await createTestAgent(
+      testFiles(join(dir, 'agent-state.json')),
       new ToolExecutor([definition(async () => ({ status: 'succeeded', summary: 'read' }))]),
       () => model,
       vault,
       () => {}
     )
-    await runtime.init()
-    await runtime.saveConfig({ baseURL: 'https://example.com/v1', model: 'm', key: 'k' })
-    runtime.setCapabilities({ text: true, streaming: true, tools: true })
-    const id = await runtime.createSession()
-    await runtime.send(id, 'read')
-    assert.equal(runtime.snapshot().calls.length, 1)
-    await runtime.deleteSession(id)
-    assert.equal(runtime.snapshot().calls.length, 0)
+
+    await runtime.services.config.save({ baseURL: 'https://example.com/v1', model: 'm', key: 'k' })
+    await runtime.services.config.setCapabilities({ text: true, streaming: true, tools: true })
+    const id = await runtime.services.sessions.create()
+    await runtime.services.chat.send(id, 'read')
+    assert.equal(runtime.services.snapshots.snapshot().calls.length, 1)
+    await runtime.services.chat.deleteSession(id)
+    assert.equal(runtime.services.snapshots.snapshot().calls.length, 0)
   }))
 
 test('manual results survive a normal profile reload', async () =>
@@ -151,49 +154,53 @@ test('manual results survive a normal profile reload', async () =>
     const executor = new ToolExecutor([
       definition(async () => ({ status: 'succeeded', summary: 'manual result' }))
     ])
-    const store = new JsonStore(join(dir, 'state.json'))
-    const runtime = new AgentRuntime(
+    const store = testFiles(join(dir, 'agent-state.json'))
+    const runtime = await createTestAgent(
       store,
       executor,
       () => noCalls,
       vault,
       () => {}
     )
-    await runtime.init()
-    await runtime.execute('read', {})
-    const restored = new AgentRuntime(
+
+    await runtime.services.tools.execute('read', {})
+    const restored = await createTestAgent(
       store,
       executor,
       () => noCalls,
       vault,
       () => {}
     )
-    await restored.init()
-    assert.equal(restored.snapshot().calls[0].result?.summary, 'manual result')
+
+    assert.equal(restored.services.snapshots.snapshot().calls[0].result?.summary, 'manual result')
   }))
 
 test('a connection test cannot grant capabilities to a different saved configuration', async () =>
   fixture(async (dir) => {
-    const runtime = new AgentRuntime(
-      new JsonStore(join(dir, 'state.json')),
+    const runtime = await createTestAgent(
+      testFiles(join(dir, 'agent-state.json')),
       new ToolExecutor([]),
       () => noCalls,
       vault,
       () => {}
     )
-    await runtime.init()
-    await runtime.saveConfig({ baseURL: 'https://a.example.com/v1', model: 'a', key: 'k' })
+
+    await runtime.services.config.save({
+      baseURL: 'https://a.example.com/v1',
+      model: 'a',
+      key: 'k'
+    })
     let finish!: () => void
-    const testResult = runtime.testConnection(async () => {
+    const testResult = runtime.probeModel(async () => {
       await new Promise<void>((resolve) => {
         finish = resolve
       })
       return { text: true, streaming: true, tools: true }
     })
-    await runtime.saveConfig({ baseURL: 'https://b.example.com/v1', model: 'b' })
+    await runtime.services.config.save({ baseURL: 'https://b.example.com/v1', model: 'b' })
     finish()
     await assert.rejects(testResult)
-    assert.equal(runtime.snapshot().config.capabilities, undefined)
+    assert.equal(runtime.services.snapshots.snapshot().config.capabilities, undefined)
   }))
 
 test('large scan summary preserves selectable file references', async () =>
@@ -212,8 +219,8 @@ test('large scan summary preserves selectable file references', async () =>
         }
       }
     }
-    const runtime = new AgentRuntime(
-      new JsonStore(join(dir, 'state.json')),
+    const runtime = await createTestAgent(
+      testFiles(join(dir, 'agent-state.json')),
       new ToolExecutor([
         definition(async () => ({
           status: 'succeeded',
@@ -232,9 +239,9 @@ test('large scan summary preserves selectable file references', async () =>
       vault,
       () => {}
     )
-    await runtime.init()
-    await runtime.saveConfig({ baseURL: 'https://example.com/v1', model: 'm', key: 'k' })
-    runtime.setCapabilities({ text: true, streaming: true, tools: true })
-    await runtime.send(await runtime.createSession(), 'scan')
+
+    await runtime.services.config.save({ baseURL: 'https://example.com/v1', model: 'm', key: 'k' })
+    await runtime.services.config.setCapabilities({ text: true, streaming: true, tools: true })
+    await runtime.services.chat.send(await runtime.services.sessions.create(), 'scan')
     assert.equal(observed, true)
   }))

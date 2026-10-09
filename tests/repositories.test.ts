@@ -22,5 +22,7 @@ test('repositories share one database and return detached copies', async () => {
     const disk = (await AgentDatabase.open(dir)).read()
     assert.equal(disk.conversations[0].title, 'original')
     assert.equal(disk.calls[0].id, 'c')
-  } finally { await rm(dir, { recursive: true, force: true }) }
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
 })

@@ -7,4 +7,3 @@ export function boundedHistory(turns: WireMessage[][], current: string): WireMes
     retained.shift()
   return [...retained.flat(), user]
 }
-

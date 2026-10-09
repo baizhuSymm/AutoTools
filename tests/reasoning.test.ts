@@ -1,11 +1,13 @@
+import { createTestAgent, testFiles } from './helpers/agentFixture'
+import type { ModelAdapter } from '../src/main/agent/contracts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { AgentRuntime, type ModelAdapter } from '../src/main/agent/runtime'
+
 import { ToolExecutor } from '../src/main/tools/executor'
-import { JsonStore } from '../src/main/storage/store'
+
 import { splitReasoning } from '../src/shared/reasoning'
 
 test('a backslash inside inline code does not escape its closing backtick', () => {
@@ -25,8 +27,8 @@ test('a fence with trailing text is not a closing fence, including split chunks'
   const content = '```xml\n```not-a-close\n<think>literal</think>\n```'
   assert.equal(splitReasoning(content).content, content)
   await fixture(tagged([...content]), async (runtime) => {
-    await runtime.send(await runtime.createSession(), 'test')
-    const message = runtime.snapshot().conversations[0].messages.at(-1)!
+    await runtime.services.chat.send(await runtime.services.sessions.create(), 'test')
+    const message = runtime.services.snapshots.snapshot().conversations[0].messages.at(-1)!
     assert.equal(message.content, content)
     assert.equal(message.reasoning, undefined)
   })
@@ -34,20 +36,23 @@ test('a fence with trailing text is not a closing fence, including split chunks'
 
 async function fixture(
   model: ModelAdapter,
-  check: (runtime: AgentRuntime, path: string) => Promise<void>
+  check: (runtime: Awaited<ReturnType<typeof createTestAgent>>, path: string) => Promise<void>
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'agent-reasoning-'))
-  const path = join(directory, 'state.json')
-  const runtime = new AgentRuntime(
-    new JsonStore(path),
+  const path = join(directory, 'agent-state.json')
+  const runtime = await createTestAgent(
+    testFiles(path),
     new ToolExecutor([]),
     () => model,
     { encrypt: () => null, decrypt: () => '' },
     () => {}
   )
   try {
-    await runtime.init()
-    await runtime.saveConfig({ baseURL: 'https://example.com/v1', model: 'test', key: 'key' })
+    await runtime.services.config.save({
+      baseURL: 'https://example.com/v1',
+      model: 'test',
+      key: 'key'
+    })
     await check(runtime, path)
   } finally {
     await runtime.shutdown()
@@ -65,28 +70,31 @@ function tagged(chunks: string[]): ModelAdapter {
 
 test('split think tags are separated from the answer and survive profile reload', async () =>
   fixture(tagged(['<thi', 'nk>先检查', '目录</th', 'ink>## 结果\n完成']), async (runtime, path) => {
-    await runtime.send(await runtime.createSession(), 'test')
-    const message = runtime.snapshot().conversations[0].messages.at(-1)!
+    await runtime.services.chat.send(await runtime.services.sessions.create(), 'test')
+    const message = runtime.services.snapshots.snapshot().conversations[0].messages.at(-1)!
     assert.equal(message.content, '## 结果\n完成')
     assert.equal(message.reasoning, '先检查目录')
     assert.equal(message.reasoningStatus, 'done')
     assert.equal(message.status, 'completed')
-    const restored = new AgentRuntime(
-      new JsonStore(path),
+    const restored = await createTestAgent(
+      testFiles(path),
       new ToolExecutor([]),
       () => tagged([]),
       { encrypt: () => null, decrypt: () => '' },
       () => {}
     )
-    await restored.init()
-    assert.equal(restored.snapshot().conversations[0].messages.at(-1)?.reasoning, '先检查目录')
+
+    assert.equal(
+      restored.services.snapshots.snapshot().conversations[0].messages.at(-1)?.reasoning,
+      '先检查目录'
+    )
     await restored.shutdown()
   }))
 
 test('an unclosed think block stays out of the answer and is marked interrupted', async () =>
   fixture(tagged(['<think>没有结束']), async (runtime) => {
-    await runtime.send(await runtime.createSession(), 'test')
-    const message = runtime.snapshot().conversations[0].messages.at(-1)!
+    await runtime.services.chat.send(await runtime.services.sessions.create(), 'test')
+    const message = runtime.services.snapshots.snapshot().conversations[0].messages.at(-1)!
     assert.equal(message.content, '')
     assert.equal(message.reasoning, '没有结束')
     assert.equal(message.reasoningStatus, 'interrupted')
@@ -95,8 +103,8 @@ test('an unclosed think block stays out of the answer and is marked interrupted'
 test('think tags inside fenced and inline code remain literal answer content', async () => {
   const content = '示例 `<think>literal</think>`\n\n```xml\n<think>example</think>\n```'
   await fixture(tagged([...content]), async (runtime) => {
-    await runtime.send(await runtime.createSession(), 'test')
-    const message = runtime.snapshot().conversations[0].messages.at(-1)!
+    await runtime.services.chat.send(await runtime.services.sessions.create(), 'test')
+    const message = runtime.services.snapshots.snapshot().conversations[0].messages.at(-1)!
     assert.equal(message.content, content)
     assert.equal(message.reasoning, undefined)
   })
@@ -110,8 +118,8 @@ test('provider reasoning events are displayed separately and bounded', async () 
     }
   }
   await fixture(model, async (runtime) => {
-    await runtime.send(await runtime.createSession(), 'test')
-    const message = runtime.snapshot().conversations[0].messages.at(-1)!
+    await runtime.services.chat.send(await runtime.services.sessions.create(), 'test')
+    const message = runtime.services.snapshots.snapshot().conversations[0].messages.at(-1)!
     assert.equal(message.reasoning, '接口返回的说明')
     assert.equal(message.content, '最终答复')
     assert.equal(message.reasoningStatus, 'done')
@@ -134,11 +142,11 @@ test('cancellation preserves partial reasoning without marking it completed', as
     }
   }
   await fixture(model, async (runtime) => {
-    const running = runtime.send(await runtime.createSession(), 'test')
+    const running = runtime.services.chat.send(await runtime.services.sessions.create(), 'test')
     await started
-    runtime.cancel()
+    runtime.services.chat.cancel()
     await running
-    const message = runtime.snapshot().conversations[0].messages.at(-1)!
+    const message = runtime.services.snapshots.snapshot().conversations[0].messages.at(-1)!
     assert.equal(message.reasoning, '尚未完成')
     assert.equal(message.reasoningStatus, 'interrupted')
     assert.equal(message.status, 'cancelled')
@@ -153,8 +161,8 @@ test('oversized provider reasoning stops the response instead of growing without
       }
     },
     async (runtime) => {
-      await runtime.send(await runtime.createSession(), 'test')
-      const message = runtime.snapshot().conversations[0].messages.at(-1)!
+      await runtime.services.chat.send(await runtime.services.sessions.create(), 'test')
+      const message = runtime.services.snapshots.snapshot().conversations[0].messages.at(-1)!
       assert.equal(message.status, 'failed')
       assert.ok(Buffer.byteLength(message.reasoning ?? '') <= 131072)
     }
@@ -187,19 +195,19 @@ test('a profile interrupted during thinking restores a non-running message', asy
         }
       ]
     }
-    await writeFile(path, JSON.stringify(state))
-    const restored = new AgentRuntime(
-      new JsonStore(path),
+    await writeFile(path.replace('agent-state.json', 'agent-data.json'), JSON.stringify(state))
+    const restored = await createTestAgent(
+      testFiles(path),
       new ToolExecutor([]),
       () => tagged([]),
       { encrypt: () => null, decrypt: () => '' },
       () => {}
     )
-    await restored.init()
-    const message = restored.snapshot().conversations[0].messages[0]
+
+    const message = restored.services.snapshots.snapshot().conversations[0].messages[0]
     assert.equal(message.reasoning, 'partial')
     assert.equal(message.reasoningStatus, 'interrupted')
     assert.equal(message.status, 'cancelled')
     await restored.shutdown()
-    assert.equal(runtime.snapshot().activeSessionId, null)
+    assert.equal(runtime.services.snapshots.snapshot().activeSessionId, null)
   }))
