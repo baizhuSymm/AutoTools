@@ -82,6 +82,7 @@ export class AgentRunner {
         if (count >= 12) { yield { type: 'text', text: '\n已达到本回合工具调用上限。' }; break }
         if (text) yield { type: 'text', text: '\n' }
       }
+      signal.throwIfAborted()
       yield { type: 'finished', status: 'completed', turn }
     } catch (error) {
       for (const part of splitter.feed('', true)) yield part
