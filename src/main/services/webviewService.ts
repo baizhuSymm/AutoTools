@@ -36,14 +36,26 @@ export class WebviewService {
       ['forwarded', () => this.hdc.listForwards(deviceId, signal)]
     ] as const
     for (const [name, operation] of steps) {
-      const result = await this.command(deviceId, signal, operation)
-      if (result.status !== 'succeeded')
-        return { ...result, data: { completed: output, failedStep: name } }
-      output[name] = (result.data as HdcExecResult).stdout
-        .split(/\r?\n/)
-        .filter((line) =>
-          name === 'forwarded' ? line.trim() : /webview|devtools|chromium/i.test(line)
-        )
+      try {
+        const result = await this.command(deviceId, signal, operation)
+        if (result.status !== 'succeeded')
+          return { ...result, data: { completed: output, failedStep: name } }
+        output[name] = (result.data as HdcExecResult).stdout
+          .split(/\r?\n/)
+          .filter((line) =>
+            name === 'forwarded' ? line.trim() : /webview|devtools|chromium/i.test(line)
+          )
+      } catch (error) {
+        return {
+          status: signal.aborted ? 'cancelled' : 'failed',
+          summary: signal.aborted
+            ? '设备探测已取消'
+            : error instanceof Error
+              ? error.message
+              : String(error),
+          data: { completed: output, failedStep: name }
+        }
+      }
     }
     return { status: 'succeeded', summary: '设备探测完成', data: output }
   }

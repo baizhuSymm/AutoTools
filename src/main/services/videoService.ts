@@ -154,11 +154,21 @@ export class VideoService {
       if (!equalPath(await this.canonical(plan.target), plan.target))
         throw new Error('目标目录已变化，请重新确认')
       for (const item of plan.items) {
-        await this.unchanged(item)
-        if (await this.exists(item.destination))
-          throw new Error(`目标已被占用，请重新确认：${item.destination}`)
-        if (!equalPath(await this.canonical(item.source), item.source))
-          throw new Error('源文件实际路径已变化')
+        try {
+          await this.unchanged(item)
+          if (await this.exists(item.destination))
+            throw new Error(`目标已被占用，请重新确认：${item.destination}`)
+          if (!equalPath(await this.canonical(item.source), item.source))
+            throw new Error('源文件实际路径已变化')
+        } catch (error) {
+          failed.push({
+            source: item.source,
+            destination: item.destination,
+            copied: false,
+            error: error instanceof Error ? error.message : String(error)
+          })
+          throw error
+        }
       }
       await this.files.makeDirectory(plan.target)
       for (const item of plan.items) {
@@ -203,7 +213,7 @@ export class VideoService {
           : error instanceof Error
             ? error.message
             : String(error),
-        data: { moved, failed }
+        data: { moved, failed, cancelled: plan.items.length - moved.length - failed.length }
       }
     }
   }

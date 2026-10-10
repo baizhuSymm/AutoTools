@@ -64,8 +64,43 @@ test('device disconnection between probe steps prevents the next native operatio
       return ok()
     }
   })
-  await assert.rejects(service.probe('chosen', signal()), /设备已断开/)
+  const result = await service.probe('chosen', signal())
+  assert.equal(result.status, 'failed')
+  assert.match(result.summary, /设备已断开/)
+  assert.deepEqual(result.data, { completed: { processes: ['webview'] }, failedStep: 'sockets' })
   assert.equal(sockets, 0)
+})
+
+test('probe cancellation retains completed steps without starting another command', async () => {
+  const controller = new AbortController()
+  let sockets = 0
+  const { service } = setup({
+    queryProcesses: async () => {
+      controller.abort()
+      return ok('webview')
+    },
+    querySockets: async () => {
+      sockets++
+      return ok()
+    }
+  })
+  const result = await service.probe('chosen', controller.signal)
+  assert.equal(result.status, 'cancelled')
+  assert.deepEqual(result.data, { completed: { processes: ['webview'] }, failedStep: 'sockets' })
+  assert.equal(sockets, 0)
+})
+
+test('probe command exceptions preserve earlier results and identify the failed step', async () => {
+  const { service } = setup({
+    queryProcesses: async () => ok('webview'),
+    querySockets: async () => {
+      throw new Error('query transport failed')
+    }
+  })
+  const result = await service.probe('chosen', signal())
+  assert.equal(result.status, 'failed')
+  assert.match(result.summary, /query transport failed/)
+  assert.deepEqual(result.data, { completed: { processes: ['webview'] }, failedStep: 'sockets' })
 })
 
 test('forward-port conflict compares the whole port and normalizes the socket', async () => {

@@ -38,14 +38,30 @@ test('same source and destination are rejected before deleting anything', async 
 
 test('target occupied after preview is never overwritten', async () =>
   fixture(async (dir) => {
+    await writeFile(join(dir, 'source', 'item', 'two.mp4'), 'two')
     const service = new VideoService(new FileSystemAdapter())
     const found = await service.scan(join(dir, 'source'), null, new AbortController().signal)
     await mkdir(join(dir, 'target'))
     const plan = await service.prepareMove(found.id, [], join(dir, 'target'))
     await writeFile(join(dir, 'target', 'one.mp4'), 'other')
-    assert.equal((await service.executeMove(plan, new AbortController().signal)).status, 'failed')
+    const result = await service.executeMove(plan, new AbortController().signal)
+    assert.equal(result.status, 'failed')
+    const data = result.data as {
+      moved: unknown[]
+      failed: { source: string; destination: string; error: string; copied: boolean }[]
+      cancelled: number
+    }
+    assert.deepEqual(data.moved, [])
+    assert.equal(data.failed.length, 1)
+    assert.equal(data.failed[0].source, plan.items[0].source)
+    assert.equal(data.failed[0].destination, plan.items[0].destination)
+    assert.equal(data.failed[0].copied, false)
+    assert.match(data.failed[0].error, /目标已被占用/)
+    assert.equal(data.cancelled, 1)
     assert.equal(await readFile(join(dir, 'target', 'one.mp4'), 'utf8'), 'other')
     assert.equal(await readFile(join(dir, 'source', 'item', 'one.mp4'), 'utf8'), 'video')
+    assert.equal(await readFile(join(dir, 'source', 'item', 'two.mp4'), 'utf8'), 'two')
+    await assert.rejects(access(join(dir, 'target', 'two.mp4')))
   }))
 
 test('source changed after preview requires a new preview', async () =>
