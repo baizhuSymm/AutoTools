@@ -96,14 +96,6 @@ export default function ChatPage() {
         </div>
       </div>
       <footer className="composer-area">
-        {snapshot.tasks.some((task) => task.status === 'running') && (
-          <div className="active-task-strip">
-            <span>
-              {snapshot.tasks.filter((task) => task.status === 'running').length} 个监控任务运行中
-            </span>
-            <Link to="/crash-monitor">查看监控</Link>
-          </div>
-        )}
         {running && snapshot.activeSessionId !== selectedId && (
           <Alert
             type="info"

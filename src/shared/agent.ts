@@ -1,5 +1,3 @@
-import type { CrashEvent } from './ipc'
-
 export type ResultStatus = 'succeeded' | 'partial' | 'failed' | 'cancelled' | 'rejected'
 export interface ToolResult {
   status: ResultStatus
@@ -32,19 +30,6 @@ export interface Conversation {
   messages: ChatMessage[]
   updatedAt: number
 }
-export interface MonitorTask {
-  id: string
-  deviceId: string
-  bundleName: string
-  status: 'starting' | 'running' | 'stopping' | 'stopped' | 'failed'
-  startedAt: number
-  endedAt?: number
-  canStop?: boolean
-  reason?: string
-  events: CrashEvent[]
-  total: number
-  truncated: number
-}
 export interface ModelConfig {
   baseURL: string
   model: string
@@ -55,7 +40,6 @@ export interface ModelConfig {
 export interface AppSnapshot {
   sequence: number
   conversations: Conversation[]
-  tasks: MonitorTask[]
   calls: ToolCall[]
   activeSessionId: string | null
   config: ModelConfig

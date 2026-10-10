@@ -19,15 +19,5 @@ export function recoverAgentData(input: AgentData): AgentData {
       call.result = { status: 'cancelled', summary: '上次运行已中断，未恢复执行' }
     }
   }
-  state.tasks = state.tasks.map((task) => {
-    const interrupted = ['running', 'starting', 'stopping'].includes(task.status)
-    return {
-      ...task,
-      events: [],
-      canStop: false,
-      status: interrupted ? 'failed' : task.status,
-      reason: interrupted ? '应用已退出，任务已中断' : task.reason
-    }
-  })
   return state
 }

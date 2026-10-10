@@ -5,7 +5,6 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createRegistry, hasForwardPort } from '../src/main/tools/registry'
 import { ToolExecutor } from '../src/main/tools/executor'
-import { MonitorManager } from '../src/main/tasks/monitor'
 
 test('forward checks match the complete port rather than a numeric prefix', () => {
   assert.equal(hasForwardPort('tcp:92221 localabstract:test', 9222), false)
@@ -18,14 +17,7 @@ test('scan references can be queried in pages and filtered without rescanning', 
     await mkdir(join(directory, 'item'))
     for (let i = 0; i < 35; i++)
       await writeFile(join(directory, 'item', `video-${String(i).padStart(2, '0')}.mp4`), 'video')
-    const registry = createRegistry(
-      new MonitorManager(
-        () => {
-          throw new Error('not used')
-        },
-        () => {}
-      )
-    )
+    const registry = createRegistry()
     const executor = new ToolExecutor(registry)
     const context = { scope: 'test', signal: new AbortController().signal, update: () => {} }
     const scan = await executor.execute('video.scan', { sourceDir: directory }, context)

@@ -1,15 +1,8 @@
-import type {
-  AppSnapshot,
-  Conversation,
-  ToolCall,
-  MonitorTask,
-  ModelConfig
-} from '../../shared/agent'
+import type { AppSnapshot, Conversation, ToolCall, ModelConfig } from '../../shared/agent'
 
 export interface SnapshotSources {
   conversations: () => Conversation[]
   calls: () => ToolCall[]
-  tasks: () => MonitorTask[]
   config: () => ModelConfig
   activeSessionId: () => string | null
   warning: () => string | undefined
@@ -27,7 +20,6 @@ export class SnapshotService {
       sequence: this.sequence,
       conversations: this.sources.conversations(),
       calls: this.sources.calls(),
-      tasks: this.sources.tasks(),
       config: this.sources.config(),
       activeSessionId: this.sources.activeSessionId(),
       warning: this.sources.warning()

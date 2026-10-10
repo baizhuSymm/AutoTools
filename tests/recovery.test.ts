@@ -34,18 +34,6 @@ test('recovery does not mutate source or restore approval authority', () => {
         status: 'awaiting_confirmation',
         confirmationId: 'old'
       }
-    ],
-    tasks: [
-      {
-        id: 't',
-        deviceId: 'd',
-        bundleName: 'a',
-        status: 'running',
-        startedAt: 1,
-        events: [],
-        total: 0,
-        truncated: 0
-      }
     ]
   })
   const recovered = recoverAgentData(source)
@@ -54,8 +42,6 @@ test('recovery does not mutate source or restore approval authority', () => {
   assert.equal(recovered.conversations[0].messages[0].reasoningStatus, 'interrupted')
   assert.equal(recovered.calls[0].confirmationId, undefined)
   assert.equal(recovered.calls[0].status, 'cancelled')
-  assert.equal(recovered.tasks[0].canStop, false)
-  assert.equal(recovered.tasks[0].status, 'failed')
   assert.throws(() => parseAgentData({ ...source, version: 2 }))
   assert.throws(() => parseSettings({ version: 2, config: {} }))
 })

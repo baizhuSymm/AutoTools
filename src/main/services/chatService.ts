@@ -70,7 +70,7 @@ export class ChatService {
       else if (event.type === 'finished') {
         message.status = event.status
         if (event.status === 'cancelled')
-          message.content += '\n已停止生成。已完成操作和运行中的监控仍保留。'
+          message.content += '\n已停止生成。已完成的操作仍保留。'
         else if (event.status === 'failed')
           message.content += `\n${this.config.sanitize(event.error)}`
       }

@@ -4,7 +4,6 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createApplication } from '../src/main/bootstrap/createApplication'
-import { MonitorManager } from '../src/main/tasks/monitor'
 import { fileSettings } from './helpers/storageFixture'
 import { AgentDatabase } from '../src/main/storage/agentDatabase'
 import { ToolExecutor } from '../src/main/tools/executor'
@@ -32,10 +31,6 @@ test('a final disk failure marks the answer failed without replaying tool effect
         else yield { type: 'text', text: 'done' }
       }
     }),
-    monitorFactory: (changed) =>
-      new MonitorManager(() => {
-        throw new Error('no device')
-      }, changed),
     executor: new ToolExecutor([
       {
         name: 'write',
@@ -81,10 +76,6 @@ test('application composition persists sessions and drains shutdown', async () =
         }
       }),
       probe: async () => ({ text: true, streaming: true, tools: true }),
-      monitorFactory: (changed: () => void) =>
-        new MonitorManager(() => {
-          throw new Error('no real process')
-        }, changed),
       publish: () => {},
       settingsFactory: fileSettings
     }

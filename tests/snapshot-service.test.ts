@@ -9,7 +9,6 @@ test('snapshots are detached and batched publishing stops after disposal', async
     {
       conversations: () => [conversation],
       calls: () => [],
-      tasks: () => [],
       config: () => ({ baseURL: '', model: '', hasKey: false, keyPersistent: false }),
       activeSessionId: () => null,
       warning: () => undefined

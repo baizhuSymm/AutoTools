@@ -391,14 +391,6 @@
   border-radius: 8px;
   background: #fff;
 }
-.active-task-strip {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  font-size: 12px;
-  color: #4d665a;
-}
 .cancel-text {
   margin-top: 4px;
   color: #757c88;
@@ -508,13 +500,6 @@
 .tool-section h2 {
   font-size: 15px;
   margin: 0 0 16px;
-}
-.monitor-strip {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 18px 0;
 }
 .ant-btn {
   display: inline-flex;

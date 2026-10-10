@@ -1,4 +1,3 @@
-﻿import { EventEmitter } from 'node:events'
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { app } from 'electron'
@@ -67,79 +66,6 @@ export function execHdc(
       resolve({ code: -1, stdout: '', stderr: err.message })
     })
   })
-}
-
-// ============== 流式 hdc 进程 ==============
-
-export interface HdcStreamEvents {
-  stdout: (chunk: string) => void
-  stderr: (chunk: string) => void
-  close: (code: number) => void
-  error: (err: Error) => void
-}
-
-export interface HdcStreamHandle {
-  id: string
-  stop: () => Promise<void>
-  on<K extends keyof HdcStreamEvents>(event: K, listener: HdcStreamEvents[K]): HdcStreamHandle
-  off<K extends keyof HdcStreamEvents>(event: K, listener: HdcStreamEvents[K]): HdcStreamHandle
-}
-
-/**
- * 启动一个长驻 hdc 进程,逐步把 stdout/stderr 推给监听者。
- * 适合 hilog 这类永不退出的命令。
- */
-export function spawnHdcStream(args: string[]): HdcStreamHandle {
-  const emitter = new EventEmitter()
-  const proc = spawn(getHdcPath(), args, {
-    cwd: getToolchainsDir(),
-    windowsHide: true
-  })
-
-  proc.stdout.setEncoding('utf8')
-  proc.stderr.setEncoding('utf8')
-
-  proc.stdout.on('data', (chunk: string) => emitter.emit('stdout', chunk))
-  proc.stderr.on('data', (chunk: string) => emitter.emit('stderr', chunk))
-  proc.on('close', (code) => emitter.emit('close', code ?? -1))
-  proc.on('error', (err: Error) => emitter.emit('error', err))
-
-  const id = `hdc-stream-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  let closed = false
-  proc.once('close', () => {
-    closed = true
-  })
-
-  const handle: HdcStreamHandle = {
-    id,
-    stop: () =>
-      new Promise<void>((resolve) => {
-        if (closed) {
-          resolve()
-          return
-        }
-        const timer = setTimeout(() => resolve(), 2000)
-        proc.once('close', () => {
-          clearTimeout(timer)
-          resolve()
-        })
-        try {
-          proc.kill()
-        } catch {
-          resolve()
-        }
-        // 兜底:2s 后强制 resolve,避免死锁
-      }),
-    on(event, listener) {
-      emitter.on(event, listener as (...args: unknown[]) => void)
-      return handle
-    },
-    off(event, listener) {
-      emitter.off(event, listener as (...args: unknown[]) => void)
-      return handle
-    }
-  }
-  return handle
 }
 
 // ============== 应用查询 ==============

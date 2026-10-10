@@ -19,7 +19,27 @@ const legacyState = {
   version: 1,
   config: { baseURL: '', model: '' },
   history: {},
-  tasks: [],
+  tasks: [
+    {
+      id: 'obsolete-task',
+      deviceId: 'old-device',
+      bundleName: 'old.app',
+      status: 'running',
+      startedAt: 1,
+      total: 1,
+      truncated: 0,
+      events: [
+        {
+          id: 1,
+          ts: 1,
+          raw: 'obsolete-monitor-event',
+          severity: 'fatal',
+          matchKeyword: 'old',
+          bundleName: 'old.app'
+        }
+      ]
+    }
+  ],
   calls: [
     {
       id: 'old-call',
@@ -180,6 +200,18 @@ try {
   assert.equal(restoredLegacy.conversations[0].messages[0].status, 'cancelled')
   assert.equal(restoredLegacy.conversations[0].messages[0].reasoningStatus, 'interrupted')
   assert.equal(restoredLegacy.calls[0].confirmationId, undefined)
+  assert.equal('tasks' in restoredLegacy, false)
+  assert.equal(await page.getByRole('link', { name: '闪退监控', exact: true }).count(), 0)
+  await page.evaluate(() => {
+    location.hash = '/crash-monitor'
+  })
+  await page.waitForFunction(() => location.hash === '#/chat')
+  await page.getByRole('heading', { name: '旧会话', exact: true }).waitFor()
+  for (const name of ['crash.start', 'crash.stop', 'crash.status', 'crash.export']) {
+    const result = await page.evaluate((tool) => window.api.agent.execute(tool, {}), name)
+    assert.equal(result.status, 'failed')
+    assert.equal(result.summary, '未知工具')
+  }
   assert.equal(
     await readFile(join(profile, 'agent-state.json.pre-layering.bak'), 'utf8'),
     legacyRaw
@@ -296,11 +328,11 @@ try {
   await page.screenshot({ path: 'test-results/chat-result.png', animations: 'disabled' })
   await page.reload()
   await page.getByText('移动成功 1，失败 0，未执行 0', { exact: true }).waitFor()
-  for (const name of ['视频提取', 'WebView 调试', '闪退监控']) {
+  for (const name of ['视频提取', 'WebView 调试']) {
     await page.getByRole('link', { name, exact: true }).click()
     await page.getByRole('heading', { name: name === '视频提取' ? /视频提取/ : name }).waitFor()
     await page.screenshot({
-      path: `test-results/manual-${name === '视频提取' ? 'video' : name === '闪退监控' ? 'monitor' : 'webview'}.png`
+      path: `test-results/manual-${name === '视频提取' ? 'video' : 'webview'}.png`
     })
   }
   await page.getByRole('link', { name: '对话', exact: true }).click()
@@ -312,6 +344,8 @@ try {
   assert.deepEqual(errors, [])
   const saved = await readFile(join(profile, 'agent-data.json'), 'utf8')
   assert.ok(!saved.includes('smoke-secret'))
+  assert.equal('tasks' in JSON.parse(saved), false)
+  assert.ok(!saved.includes('obsolete-monitor-event'))
   const settings = await readFile(join(profile, 'agent-settings.json'), 'utf8')
   assert.ok(!settings.includes('smoke-secret'))
   assert.equal(JSON.parse(settings).migration.kind, 'legacy')
@@ -320,6 +354,8 @@ try {
   page = await app.firstWindow()
   await page.getByRole('heading', { name: '富文本测试', exact: true }).waitFor()
   const restarted = await page.evaluate(() => window.api.agent.snapshot())
+  assert.equal('tasks' in restarted, false)
+  assert.equal(await page.getByRole('link', { name: '闪退监控', exact: true }).count(), 0)
   assert.equal(restarted.conversations[0].messages.at(-1).status, 'completed')
   assert.equal(
     restarted.calls.find((call) => call.name === 'video.move' && call.status === 'succeeded').result

@@ -1,13 +1,10 @@
 import { z } from 'zod'
-import { randomUUID } from 'node:crypto'
-import { mkdir, writeFile, lstat, realpath } from 'node:fs/promises'
-import { isAbsolute, join, resolve } from 'node:path'
+import { isAbsolute } from 'node:path'
 import { shell } from 'electron'
 import { execHdc, getForegroundBundle, listInstalledBundles } from '../services/hdcService'
 import { detectChromePath, launchChrome } from '../services/chromeService'
 import { scan, prepareMove, executeMove, type Scan, type MovePlan } from '../services/videoService'
-import { monitorReport, type MonitorManager } from '../tasks/monitor'
-import type { MonitorTask, ToolResult } from '../../shared/agent'
+import type { ToolResult } from '../../shared/agent'
 import type { PreparedTool, ToolDefinition } from './executor'
 
 const pathSchema = z.string().trim().min(1).refine(isAbsolute, '需要绝对目录路径')
@@ -22,7 +19,6 @@ const bundleSchema = z
   .max(256)
   .regex(/^[a-zA-Z0-9_.]+$/)
 const portSchema = z.number().int().min(1).max(65535)
-const taskSchema = z.object({ taskId: z.string().uuid() })
 const deviceInput = z.object({ deviceId: deviceSchema })
 
 export function hasForwardPort(output: string, port: number): boolean {
@@ -73,7 +69,7 @@ async function command(deviceId: string, args: string[], signal: AbortSignal): P
   }
 }
 
-export function createRegistry(monitors: MonitorManager): ToolDefinition[] {
+export function createRegistry(): ToolDefinition[] {
   const scans = new Map<string, Scan>()
   const direct = async (
     title: string,
@@ -287,98 +283,6 @@ export function createRegistry(monitors: MonitorManager): ToolDefinition[] {
           await launchChrome(chrome, url)
         } else await shell.openExternal(url)
         return success('已打开调试端点', { url })
-      }
-    ),
-    deviceOperation(
-      'crash.start',
-      '开始关键词闪退监控，返回持续任务 ID。切换页面不会停止监控。',
-      z.object({ deviceId: deviceSchema, bundleName: bundleSchema }),
-      false,
-      async (input, signal) => {
-        await verifyDevice(String(input.deviceId), signal)
-        signal.throwIfAborted()
-        const task = monitors.start(String(input.deviceId), String(input.bundleName))
-        return task.status === 'failed'
-          ? { status: 'failed', summary: task.reason || '任务异常，请先停止原进程', data: task }
-          : success('监控已启动', task)
-      }
-    ),
-    deviceOperation(
-      'crash.stop',
-      '停止本应用创建的监控任务。',
-      taskSchema,
-      false,
-      async (input) => {
-        const task = await monitors.stop(String(input.taskId))
-        return {
-          status: task.status === 'failed' ? 'failed' : 'succeeded',
-          summary: task.reason || '监控已停止',
-          data: task
-        }
-      }
-    ),
-    deviceOperation(
-      'crash.status',
-      '查询任务状态和已保留事件；不分析根因。',
-      taskSchema,
-      false,
-      async (input) => success('监控状态', monitors.snapshot(String(input.taskId)))
-    ),
-    define(
-      'crash.export',
-      '导出当前保留的关键词匹配事件，非完整 hilog；执行前确认实际目录和文件名。',
-      z.object({ taskId: z.string().uuid(), directory: pathSchema }),
-      true,
-      async (input) => {
-        const task = monitors.snapshot(input.taskId)
-        const directory = resolve(input.directory)
-        const suffix = `${task.bundleName}_${Date.now()}_${randomUUID().slice(0, 8)}`
-        const paths = [
-          join(directory, `${suffix}_summary.txt`),
-          join(directory, `${suffix}_events.log`)
-        ]
-        return {
-          title: `导出 ${task.events.length} 条保留事件`,
-          details: {
-            paths,
-            total: task.total,
-            retained: task.events.length,
-            dropped: task.total - task.events.length
-          },
-          data: { task, directory, paths }
-        }
-      },
-      async (plan: { task: MonitorTask; directory: string; paths: string[] }, signal) => {
-        signal.throwIfAborted()
-        for (const path of plan.paths) {
-          try {
-            await lstat(path)
-            throw new Error('导出路径已占用，请重新确认')
-          } catch (error) {
-            if ((error as { code?: string }).code !== 'ENOENT') throw error
-          }
-        }
-        await mkdir(plan.directory, { recursive: true })
-        if ((await realpath(plan.directory)).toLowerCase() !== plan.directory.toLowerCase())
-          throw new Error('目录实际路径不同，请使用实际目录重新确认')
-        const written: string[] = []
-        try {
-          await writeFile(plan.paths[0], monitorReport(plan.task), { encoding: 'utf8', flag: 'wx' })
-          written.push(plan.paths[0])
-          signal.throwIfAborted()
-          await writeFile(plan.paths[1], plan.task.events.map((event) => event.raw).join('\n'), {
-            encoding: 'utf8',
-            flag: 'wx'
-          })
-          written.push(plan.paths[1])
-          return success('事件已导出', { paths: written })
-        } catch (error) {
-          return {
-            status: written.length ? 'partial' : signal.aborted ? 'cancelled' : 'failed',
-            summary: `已写入 ${written.length} 个文件：${error instanceof Error ? error.message : String(error)}`,
-            data: { paths: written }
-          }
-        }
       }
     )
   ]

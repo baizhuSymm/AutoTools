@@ -13,7 +13,6 @@ import { ChatService } from '../services/chatService'
 import { ModelConfigService, type ModelProbe } from '../services/modelConfigService'
 import { ToolService } from '../services/toolService'
 import { SnapshotService } from '../services/snapshotService'
-import type { MonitorManager } from '../tasks/monitor'
 import { ToolExecutor } from '../tools/executor'
 import { createRegistry } from '../tools/registry'
 
@@ -29,7 +28,6 @@ export interface ApplicationOptions {
   vault: SecretVault
   modelFactory: (config: ModelConfig, key: string) => ModelAdapter
   probe: ModelProbe
-  monitorFactory: (changed: () => void) => MonitorManager
   publish: (snapshot: AppSnapshot) => void
   settingsFactory?: SettingsBackendFactory
   executor?: ToolExecutor
@@ -50,16 +48,6 @@ export async function createApplication(
     warning = config.sanitize(error)
     changed()
   })
-  const monitors = options.monitorFactory(() => {
-    executions.replaceTasks(tasks())
-    persistence.schedule()
-    changed()
-  })
-  const restored = executions.tasks()
-  const tasks = (): ReturnType<MonitorManager['list']> => {
-    const live = monitors.list()
-    return [...restored.filter((task) => !live.some((item) => item.id === task.id)), ...live]
-  }
   const sessions = new SessionService(
     new SessionRepository(storage.database),
     executions,
@@ -74,7 +62,7 @@ export async function createApplication(
     changed
   )
   const tools = new ToolService(
-    options.executor ?? new ToolExecutor(createRegistry(monitors)),
+    options.executor ?? new ToolExecutor(createRegistry()),
     executions,
     persistence,
     changed
@@ -93,7 +81,6 @@ export async function createApplication(
     {
       conversations: () => sessions.list(),
       calls: () => tools.calls(),
-      tasks,
       config: () => config.snapshot(),
       activeSessionId: () => chat.activeSessionId(),
       warning: () => warning ?? config.warning
@@ -122,8 +109,6 @@ export async function createApplication(
           const results = await Promise.allSettled([chat.close(), tools.close()])
           for (const result of results)
             if (result.status === 'rejected') failures.push(result.reason)
-          await invoke(() => monitors.shutdown())
-          executions.replaceTasks(tasks())
           await invoke(() => persistence.commit())
           await invoke(() => persistence.flush())
         } finally {

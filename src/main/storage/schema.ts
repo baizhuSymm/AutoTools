@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Conversation, ModelConfig, MonitorTask, ToolCall } from '../../shared/agent'
+import type { Conversation, ModelConfig, ToolCall } from '../../shared/agent'
 import type { HistoryTurns } from '../agent/contracts'
 
 export type StoredConfig = Omit<ModelConfig, 'hasKey' | 'keyPersistent'>
@@ -8,7 +8,6 @@ export interface AgentData {
   conversations: Conversation[]
   history: Record<string, HistoryTurns>
   calls: ToolCall[]
-  tasks: MonitorTask[]
 }
 export interface MigrationRecord {
   kind: 'fresh' | 'legacy'
@@ -72,28 +71,6 @@ const wireMessage = z.object({
   tool_calls: z.array(modelCall).optional(),
   tool_call_id: z.string().optional()
 })
-const task = z.object({
-  id: z.string(),
-  deviceId: z.string(),
-  bundleName: z.string(),
-  status: z.enum(['starting', 'running', 'stopping', 'stopped', 'failed']),
-  startedAt: z.number(),
-  endedAt: z.number().optional(),
-  canStop: z.boolean().optional(),
-  reason: z.string().optional(),
-  events: z.array(
-    z.object({
-      id: z.number(),
-      ts: z.number(),
-      raw: z.string(),
-      severity: z.enum(['fatal', 'error', 'warn', 'info']),
-      matchKeyword: z.string(),
-      bundleName: z.string()
-    })
-  ),
-  total: z.number(),
-  truncated: z.number()
-})
 const state = z.object({
   version: z.literal(1),
   conversations: z.array(
@@ -106,7 +83,6 @@ const state = z.object({
   ),
   history: z.record(z.string(), z.array(z.array(wireMessage))),
   calls: z.array(call).default([]),
-  tasks: z.array(task).default([]),
   config: z.object({
     baseURL: z.string(),
     model: z.string(),

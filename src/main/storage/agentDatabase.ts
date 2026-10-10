@@ -7,8 +7,7 @@ export const emptyAgentData = (): AgentData => ({
   version: 1,
   conversations: [],
   history: {},
-  calls: [],
-  tasks: []
+  calls: []
 })
 
 export class AgentDatabase {

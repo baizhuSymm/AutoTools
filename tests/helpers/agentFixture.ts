@@ -4,7 +4,6 @@ import type { AppSnapshot, ModelConfig } from '../../src/shared/agent'
 import type { ModelAdapter, SecretVault } from '../../src/main/agent/contracts'
 import type { ModelProbe } from '../../src/main/services/modelConfigService'
 import { createApplication } from '../../src/main/bootstrap/createApplication'
-import { MonitorManager } from '../../src/main/tasks/monitor'
 import type { ToolExecutor } from '../../src/main/tools/executor'
 import { fileSettings } from './storageFixture'
 
@@ -38,11 +37,7 @@ export async function createTestAgent(
     vault,
     publish,
     settingsFactory: fileSettings,
-    probe: (config, key) => probe(config, key),
-    monitorFactory: (changed) =>
-      new MonitorManager(() => {
-        throw new Error('test must not spawn a device process')
-      }, changed)
+    probe: (config, key) => probe(config, key)
   })
   return {
     ...application,

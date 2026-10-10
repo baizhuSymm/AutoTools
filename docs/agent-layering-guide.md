@@ -44,14 +44,14 @@ IPC 不创建 Runtime 或存储。Runner 不知道 BrowserWindow、会话 CRUD �
 
 服务是业务修改入口；Repository 持有数据访问权限。读取返回副本，修改副本不会修改真实状态。SessionService 用明确的会话 ID 和消息 ID 更新，不假定最后一条消息就是当前目标。
 
-ChatService 持有当前对话的 AbortController；ToolService 持有手动调用的控制器；ToolExecutor 持有一次性确认；MonitorManager 持有真正的设备子进程。它们不属于存储，也不会在重启后复活。
+ChatService 持有当前对话的 AbortController；ToolService 持有手动调用的控制器；ToolExecutor 持有一次性确认。它们不属于存储，也不会在重启后复活。
 
 ## 保存到哪里
 
 文件位于 Electron 的 userData 目录：
 
 - `agent-settings.json`：electron-store 保存模型配置、能力和加密后的 Key。
-- `agent-data.json`：lowdb 保存会话、模型历史、工具记录和历史监控元数据。
+- `agent-data.json`：lowdb 保存会话、模型历史和工具记录。
 - `agent-state.json`：旧文件，迁移后仍保留，不再更新。
 - `agent-state.json.pre-layering.bak`：迁移前的原始字节备份。
 
@@ -63,6 +63,10 @@ ChatService 持有当前对话的 AbortController；ToolService 持有手动调�
 
 迁移的完成标记最后写入。目标缺失、结构错误、源与备份不一致时，不覆盖文件，界面给出告警，持久化操作失败；检查原件和备份后再恢复，不能删除文件来假装迁移成功。
 
-重启将未完成消息和工具标记中止，清除旧 confirmationId，历史监控不会自动启动。退出先停止命令入口，再取消并等待执行、关闭监控，最后保存并等待写入；保存失败会报告错误，不保证已执行设备动作可以回滚。
+重启将未完成消息和工具标记中止，清除旧 confirmationId。退出先停止命令入口，再取消并等待执行，最后保存并等待写入；保存失败会报告错误，不保证已执行设备动作可以回滚。
+
+## 已移除功能
+
+2026-10-10 删除了崩溃监控页面、Agent 工具、后台进程、流式 IPC 类型和任务保存。旧文件中的 `tasks` 字段加载时忽略，下一次保存不再写入；聊天内容和工具历史继续保留，原始迁移备份及用户导出文件不删除。历史设计文档描述当时的实现，不代表当前功能。
 
 测试使用临时 profile 和本地假模型。真实云端 provider 和真实设备兼容性需要另外验证。

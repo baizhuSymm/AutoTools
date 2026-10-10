@@ -2,10 +2,9 @@
 
 A local desktop Agent built with Electron, LangChain JS, React, Ant Design and Ant Design X.
 
-The chat home invokes video scanning/moving, device and application queries, WebView debugging,
-and crash-event monitoring. The three manual tool pages share the same execution services.
+The chat home invokes video scanning/moving, device and application queries, and WebView debugging.
+The two manual tool pages share the same execution services.
 File mutations and device configuration changes show a concrete preview and require approval.
-Monitor tasks continue when navigating between pages; quitting the application stops them.
 
 ## Chat Responses
 
@@ -27,17 +26,18 @@ plain responses, streaming and a harmless tool call. Tool mode is enabled only a
 tool-call test. Manual tools work without a model connection.
 
 Conversation content and limited tool-result summaries are sent to the configured provider.
-Continuous device logs and full video lists are retained locally. Keys use Electron's system
+Full video lists are retained locally. Keys use Electron's system
 encryption; when encryption is unavailable, keys last only for the current process.
-Conversations and final task metadata live in `agent-data.json` (lowdb) under Electron's user data directory.
+Conversations, model history and tool records live in `agent-data.json` (lowdb) under Electron's user data directory.
 Model configuration and encrypted keys live in `agent-settings.json` (electron-store).
 The old `agent-state.json` is migrated once and retained with an original-byte backup; damaged or
 incomplete migration records are never silently overwritten. See the [layered architecture guide](docs/agent-layering-guide.md).
 Set `AUTOTOOLS_USER_DATA` to an existing absolute directory to use a separate profile.
 
 Video date filters use source subdirectory modification time, matching the original tool.
-Monitoring retains the latest 500 keyword-matched events; exports include only that retained snapshot,
-not the complete device log. Keyword matches are observations, not a root-cause diagnosis.
+Crash monitoring has been removed. Old `tasks` fields are ignored during loading and are not saved
+again; conversations, model configuration and tool history remain intact. Old profiles and backups
+are not deleted, and previously exported files are not touched.
 
 ## Recommended IDE Setup
 
@@ -88,6 +88,9 @@ or change a real device. Real-device and provider compatibility still require se
 The smoke also checks rich Markdown, highlighted literal think tags in code, reasoning-field streaming,
 thinking cancellation/reload, answer copying, safe links/HTML/images and narrow-window rendering.
 It also migrates a legacy profile and performs a real application restart to verify library-backed persistence.
+Removed monitoring tools return unknown-tool results, the old route redirects to chat, and stale
+monitoring data does not appear in snapshots or the new data file.
 
-Design: [Agent specification](docs/superpowers/specs/2026-10-08-local-tool-agent-design.md).
-Implementation: [Execution plan](docs/superpowers/plans/2026-10-08-local-tool-agent.md).
+Historical design: [Agent specification](docs/superpowers/specs/2026-10-08-local-tool-agent-design.md).
+Historical implementation: [Execution plan](docs/superpowers/plans/2026-10-08-local-tool-agent.md).
+These records describe the original implementation, including features subsequently removed.

@@ -1,4 +1,4 @@
-import type { ToolCall, MonitorTask } from '../../shared/agent'
+import type { ToolCall } from '../../shared/agent'
 import type { AgentDatabase } from '../storage/agentDatabase'
 
 export class ExecutionRepository {
@@ -22,14 +22,6 @@ export class ExecutionRepository {
   deleteScope(scope: string): void {
     this.database.update((data) => {
       data.calls = data.calls.filter((call) => call.scope !== scope)
-    })
-  }
-  tasks(): MonitorTask[] {
-    return this.database.read().tasks
-  }
-  replaceTasks(tasks: MonitorTask[]): void {
-    this.database.update((data) => {
-      data.tasks = tasks.map((task) => ({ ...structuredClone(task), events: [] }))
     })
   }
 }

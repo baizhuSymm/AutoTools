@@ -1,13 +1,12 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Button, Popconfirm, Tooltip } from 'antd'
-import { Bot, Bug, Film, MessageSquare, Plus, Settings, Terminal, Trash2 } from 'lucide-react'
+import { Bot, Film, MessageSquare, Plus, Settings, Terminal, Trash2 } from 'lucide-react'
 import { useAgent } from '../features/agent/context'
 
 const navItems = [
   { name: '对话', path: '/chat', icon: MessageSquare },
   { name: '视频提取', path: '/wallpaper', icon: Film },
-  { name: 'WebView 调试', path: '/hdc-devtools', icon: Terminal },
-  { name: '闪退监控', path: '/crash-monitor', icon: Bug }
+  { name: 'WebView 调试', path: '/hdc-devtools', icon: Terminal }
 ]
 
 export default function Layout() {
@@ -72,7 +71,6 @@ export default function Layout() {
               </button>
               <Popconfirm
                 title="删除这段会话？"
-                description="运行中的监控任务会保留。"
                 onConfirm={() => window.api.agent.deleteSession(session.id).catch(report)}
               >
                 <Button

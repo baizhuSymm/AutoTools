@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { z } from 'zod'
 import { ToolExecutor } from '../src/main/tools/executor'
 
-test('pending mutation approval does not block read-only tools or task stop', async () => {
+test('pending mutation approval does not block read-only tools', async () => {
   const executor = new ToolExecutor([
     {
       name: 'write',

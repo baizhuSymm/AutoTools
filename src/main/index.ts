@@ -7,8 +7,6 @@ import { createApplication } from './bootstrap/createApplication'
 import { createSecretVault } from './infrastructure/secretVault'
 import { createSnapshotPublisher } from './infrastructure/snapshotPublisher'
 import { createModel, testModel } from './agent/model'
-import { MonitorManager } from './tasks/monitor'
-import { spawnHdcStream } from './services/hdcService'
 
 app.setName('AutoTools')
 if (process.env['AUTOTOOLS_USER_DATA']) app.setPath('userData', process.env['AUTOTOOLS_USER_DATA'])
@@ -82,13 +80,7 @@ app.whenReady().then(async () => {
     modelFactory: createModel,
     probe: testModel,
     publish: createSnapshotPublisher(),
-    diagnose: (message) => console.error(message),
-    monitorFactory: (changed) =>
-      new MonitorManager(
-        (deviceId) =>
-          spawnHdcStream(['-t', deviceId, 'shell', 'hilog', '-T', 'faultlogger', '-T', 'AppMgr']),
-        changed
-      )
+    diagnose: (message) => console.error(message)
   })
   const unregister = registerAgentIpc(application.services, (event) =>
     Boolean(

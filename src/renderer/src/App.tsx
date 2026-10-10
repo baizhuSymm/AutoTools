@@ -5,7 +5,6 @@ import zhCN from 'antd/locale/zh_CN'
 import AgentProvider from './features/agent/AgentProvider'
 import ChatPage from './pages/ChatPage'
 import SettingsPage from './pages/SettingsPage'
-import CrashMonitorPage from './pages/CrashMonitorPage'
 import HdcDevToolsPage from './pages/HdcDevToolsPage'
 import WallpaperVideoTool from './pages/WallpaperVideoTool'
 
@@ -31,7 +30,7 @@ export default function App() {
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="wallpaper" element={<WallpaperVideoTool />} />
                 <Route path="hdc-devtools" element={<HdcDevToolsPage />} />
-                <Route path="crash-monitor" element={<CrashMonitorPage />} />
+                <Route path="*" element={<Navigate to="/chat" replace />} />
               </Route>
             </Routes>
           </HashRouter>
