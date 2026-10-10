@@ -43,7 +43,10 @@ export interface ToolDefinition {
 }
 
 export type ModelFactory = (config: ModelConfig, key: string) => ModelAdapter
-export type ModelProbe = (config: ModelConfig, key: string) => Promise<NonNullable<ModelConfig['capabilities']>>
+export type ModelProbe = (
+  config: ModelConfig,
+  key: string
+) => Promise<NonNullable<ModelConfig['capabilities']>>
 export type StoredConfig = Omit<ModelConfig, 'hasKey' | 'keyPersistent'>
 export interface AgentRecords {
   conversations: Conversation[]
