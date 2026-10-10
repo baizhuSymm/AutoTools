@@ -18,7 +18,8 @@ export interface ModelAdapter {
   stream(
     messages: WireMessage[],
     definitions: ToolDefinition[],
-    signal: AbortSignal
+    signal: AbortSignal,
+    systemPrompt: string
   ): AsyncIterable<ModelEvent>
 }
 export interface SecretVault {

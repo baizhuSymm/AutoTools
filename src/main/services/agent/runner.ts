@@ -1,3 +1,4 @@
+import { buildSystemPrompt } from './systemPrompt'
 import { ReasoningSplitter } from '../../../shared/reasoning'
 import type { ToolResult } from '../../../shared/agent'
 import type { ToolDefinition } from '../../contracts/agent'
@@ -40,7 +41,12 @@ export class AgentRunner {
         let reasoning = ''
         splitter = new ReasoningSplitter()
         const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(120000)])
-        for await (const event of model.stream(messages, definitions, requestSignal)) {
+        for await (const event of model.stream(
+          messages,
+          definitions,
+          requestSignal,
+          buildSystemPrompt(new Date())
+        )) {
           requestSignal.throwIfAborted()
           if (event.type === 'calls') {
             calls = event.calls

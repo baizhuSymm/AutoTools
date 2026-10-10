@@ -6,7 +6,7 @@ import { registerAgentIpc } from './ipc/agentIpc'
 import { createApplication } from './bootstrap/createApplication'
 import { createSecretVault } from './adapters/electron/secretVault'
 import { createSnapshotPublisher } from './adapters/electron/snapshotPublisher'
-import { createModel, testModel } from './agent/model'
+import { createModel, testModel } from './adapters/model/langchainAdapter'
 
 app.setName('AutoTools')
 if (process.env['AUTOTOOLS_USER_DATA']) app.setPath('userData', process.env['AUTOTOOLS_USER_DATA'])
