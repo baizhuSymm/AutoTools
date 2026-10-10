@@ -5,7 +5,7 @@ import { execHdc, getForegroundBundle, listInstalledBundles } from '../services/
 import { detectChromePath, launchChrome } from '../services/chromeService'
 import { scan, prepareMove, executeMove, type Scan, type MovePlan } from '../services/videoService'
 import type { ToolResult } from '../../shared/agent'
-import type { PreparedTool, ToolDefinition } from './executor'
+import type { PreparedTool, ToolDefinition } from '../contracts/agent'
 
 const pathSchema = z.string().trim().min(1).refine(isAbsolute, '需要绝对目录路径')
 const deviceSchema = z

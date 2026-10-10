@@ -9,8 +9,8 @@ import {
 import { tool } from 'langchain'
 import { z } from 'zod'
 import type { ModelConfig } from '../../shared/agent'
-import type { ModelAdapter, ModelEvent, WireMessage } from './contracts'
-import type { ToolDefinition } from '../tools/executor'
+import type { ModelAdapter, ModelEvent, WireMessage } from '../contracts/agent'
+import type { ToolDefinition } from '../contracts/agent'
 
 const systemPrompt = `你是 AutoTools 本地工具助手，使用中文。仅调用提供的工具并依据真实结果回复。
 先查询设备；只有一台在线设备时可以选定并说明，多台设备必须询问。缺少目录、应用或目标时询问，不编造参数。

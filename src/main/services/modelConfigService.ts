@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { ModelConfig } from '../../shared/agent'
-import type { SecretVault } from '../agent/contracts'
+import type { SecretVault } from '../contracts/agent'
 import type { ConfigRepository } from '../repositories/configRepository'
 
 export type ModelProbe = (

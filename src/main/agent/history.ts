@@ -1,4 +1,4 @@
-import type { WireMessage } from './contracts'
+import type { WireMessage } from '../contracts/agent'
 export function boundedHistory(turns: WireMessage[][], current: string): WireMessage[] {
   const user: WireMessage = { role: 'user', content: current }
   if (Buffer.byteLength(JSON.stringify([user])) > 60000) throw new Error('消息过长，请缩短后发送')

@@ -1,5 +1,5 @@
 import { createTestAgent, testFiles } from './helpers/agentFixture'
-import type { ModelAdapter } from '../src/main/agent/contracts'
+import type { ModelAdapter } from '../src/main/contracts/agent'
 import { summarizeResult } from '../src/main/agent/toolSummary'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'

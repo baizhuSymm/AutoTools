@@ -1,5 +1,5 @@
 import type { ModelConfig, ToolCall } from '../../shared/agent'
-import type { ModelAdapter } from '../agent/contracts'
+import type { ModelAdapter } from '../contracts/agent'
 import type { AgentRunner, RunnerEvent } from '../agent/runner'
 import type { SessionService } from './sessionService'
 import type { ModelConfigService } from './modelConfigService'

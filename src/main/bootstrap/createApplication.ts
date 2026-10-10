@@ -1,5 +1,5 @@
 import type { AppSnapshot, ModelConfig } from '../../shared/agent'
-import type { ModelAdapter, SecretVault } from '../agent/contracts'
+import type { ModelAdapter, SecretVault } from '../contracts/agent'
 import { AgentRunner } from '../agent/runner'
 import { prepareStorage } from '../storage/migration'
 import { recoverAgentData } from '../storage/recovery'

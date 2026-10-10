@@ -1,5 +1,6 @@
 import type { ToolCall, ToolResult } from '../../shared/agent'
-import type { ToolExecutor, ToolDefinition } from '../tools/executor'
+import type { ToolExecutor } from '../tools/executor'
+import type { ToolDefinition } from '../contracts/agent'
 import type { ExecutionRepository } from '../repositories/executionRepository'
 import type { PersistenceCoordinator } from '../storage/persistenceCoordinator'
 

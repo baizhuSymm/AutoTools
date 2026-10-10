@@ -1,7 +1,7 @@
 import { dirname, join } from 'node:path'
 import { readFile } from 'node:fs/promises'
 import type { AppSnapshot, ModelConfig } from '../../src/shared/agent'
-import type { ModelAdapter, SecretVault } from '../../src/main/agent/contracts'
+import type { ModelAdapter, SecretVault } from '../../src/main/contracts/agent'
 import type { ModelProbe } from '../../src/main/services/modelConfigService'
 import { createApplication } from '../../src/main/bootstrap/createApplication'
 import type { ToolExecutor } from '../../src/main/tools/executor'

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { ChatMessage, Conversation } from '../../shared/agent'
-import type { WireMessage } from '../agent/contracts'
+import type { WireMessage } from '../contracts/agent'
 import { boundedHistory } from '../agent/history'
 import type { SessionRepository } from '../repositories/sessionRepository'
 import type { ExecutionRepository } from '../repositories/executionRepository'

@@ -1,20 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import type { z } from 'zod'
+import type { ToolDefinition } from '../contracts/agent'
 import type { ToolCall, ToolResult } from '../../shared/agent'
 
-export interface PreparedTool {
-  title: string
-  details: unknown
-  data: unknown
-}
-export interface ToolDefinition {
-  name: string
-  description: string
-  schema: z.ZodType<Record<string, unknown>>
-  confirm: boolean
-  prepare: (input: Record<string, unknown>) => Promise<PreparedTool>
-  execute: (data: unknown, signal: AbortSignal) => Promise<ToolResult>
-}
 export interface ExecutionContext {
   scope: string
   signal: AbortSignal

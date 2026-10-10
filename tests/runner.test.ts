@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { z } from 'zod'
 import { AgentRunner } from '../src/main/agent/runner'
-import type { ModelAdapter } from '../src/main/agent/contracts'
+import type { ModelAdapter } from '../src/main/contracts/agent'
 
 test('request timeout and continuation budget fail without executing tools', async (context) => {
   context.mock.method(AbortSignal, 'timeout', () => AbortSignal.abort(new Error('request timeout')))

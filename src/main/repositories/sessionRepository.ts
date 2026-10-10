@@ -1,5 +1,5 @@
 import type { Conversation } from '../../shared/agent'
-import type { HistoryTurns, WireMessage } from '../agent/contracts'
+import type { HistoryTurns, WireMessage } from '../contracts/agent'
 import type { AgentDatabase } from '../storage/agentDatabase'
 
 export class SessionRepository {
