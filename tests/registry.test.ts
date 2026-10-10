@@ -1,3 +1,5 @@
+import { VideoService } from '../src/main/services/videoService'
+import { FileSystemAdapter } from '../src/main/adapters/filesystem/fileSystemAdapter'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
@@ -17,7 +19,7 @@ test('scan references can be queried in pages and filtered without rescanning', 
     await mkdir(join(directory, 'item'))
     for (let i = 0; i < 35; i++)
       await writeFile(join(directory, 'item', `video-${String(i).padStart(2, '0')}.mp4`), 'video')
-    const registry = createRegistry()
+    const registry = createRegistry(new VideoService(new FileSystemAdapter()))
     const executor = new ToolExecutor(registry)
     const context = { scope: 'test', signal: new AbortController().signal, update: () => {} }
     const scan = await executor.execute('video.scan', { sourceDir: directory }, context)

@@ -3,7 +3,8 @@ import { isAbsolute } from 'node:path'
 import { shell } from 'electron'
 import { execHdc, getForegroundBundle, listInstalledBundles } from '../services/hdcService'
 import { detectChromePath, launchChrome } from '../services/chromeService'
-import { scan, prepareMove, executeMove, type Scan, type MovePlan } from '../services/videoService'
+import type { VideoService } from '../services/videoService'
+import type { MovePlan } from '../contracts/video'
 import type { ToolResult } from '../../shared/agent'
 import type { PreparedTool, ToolDefinition } from '../contracts/agent'
 
@@ -69,8 +70,7 @@ async function command(deviceId: string, args: string[], signal: AbortSignal): P
   }
 }
 
-export function createRegistry(): ToolDefinition[] {
-  const scans = new Map<string, Scan>()
+export function createRegistry(video: VideoService): ToolDefinition[] {
   const direct = async (
     title: string,
     input: Record<string, unknown>
@@ -99,15 +99,8 @@ export function createRegistry(): ToolDefinition[] {
       false,
       async (input) => ({ title: '扫描视频', details: input, data: input }),
       async (input, signal) => {
-        signal.throwIfAborted()
-        const found = await scan(input.sourceDir, input.dateRange ?? null)
-        signal.throwIfAborted()
-        scans.set(found.id, found)
-        if (scans.size > 20) scans.delete(scans.keys().next().value!)
-        return success(`找到 ${found.files.length} 个视频；日期按子目录修改时间筛选`, {
-          ...found,
-          files: found.files.map(({ fingerprint: _fingerprint, ...file }) => file)
-        })
+        const found = await video.scan(input.sourceDir, input.dateRange ?? null, signal)
+        return success(`找到 ${found.files.length} 个视频；日期按子目录修改时间筛选`, found)
       }
     ),
     define(
@@ -122,23 +115,8 @@ export function createRegistry(): ToolDefinition[] {
       false,
       async (input) => ({ title: '查询扫描清单', details: input, data: input }),
       async (input) => {
-        const found = scans.get(input.scanId)
-        if (!found) throw new Error('扫描记录已过期，请重新扫描')
-        const query = input.query.toLowerCase()
-        const matches = found.files.filter((file) =>
-          `${file.name} ${file.fromSubfolder}`.toLowerCase().includes(query)
-        )
-        const files = matches
-          .slice(input.offset, input.offset + input.limit)
-          .map(({ fingerprint: _fingerprint, ...file }) => file)
-        return success(`匹配 ${matches.length} 个文件，本页 ${files.length} 个`, {
-          id: found.id,
-          files,
-          total: matches.length,
-          offset: input.offset,
-          nextOffset:
-            input.offset + files.length < matches.length ? input.offset + files.length : null
-        })
+        const page = video.results(input.scanId, input.offset, input.limit, input.query)
+        return success(`匹配 ${page.total} 个文件，本页 ${page.files.length} 个`, page)
       }
     ),
     define(
@@ -151,12 +129,10 @@ export function createRegistry(): ToolDefinition[] {
       }),
       true,
       async (input) => {
-        const found = scans.get(input.scanId)
-        if (!found) throw new Error('扫描记录已过期，请重新扫描')
-        const plan = await prepareMove(found, input.fileIds, input.targetDir)
+        const plan = await video.prepareMove(input.scanId, input.fileIds, input.targetDir)
         return { title: `移动 ${plan.items.length} 个视频`, details: plan, data: plan }
       },
-      (plan: MovePlan, signal) => executeMove(plan, signal)
+      (plan: MovePlan, signal) => video.executeMove(plan, signal)
     ),
     deviceOperation(
       'device.list',

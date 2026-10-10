@@ -1,3 +1,5 @@
+import { VideoService } from '../services/videoService'
+import { FileSystemAdapter } from '../adapters/filesystem/fileSystemAdapter'
 import type { AppSnapshot, ModelConfig } from '../../shared/agent'
 import type { ModelAdapter, SecretVault } from '../contracts/agent'
 import { AgentRunner } from '../agent/runner'
@@ -62,7 +64,7 @@ export async function createApplication(
     changed
   )
   const tools = new ToolService(
-    options.executor ?? new ToolExecutor(createRegistry()),
+    options.executor ?? new ToolExecutor(createRegistry(new VideoService(new FileSystemAdapter()))),
     executions,
     persistence,
     changed
