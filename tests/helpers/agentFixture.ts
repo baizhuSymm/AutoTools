@@ -1,3 +1,4 @@
+import { applicationPlatform } from './applicationPlatform'
 import { dirname, join } from 'node:path'
 import { readFile } from 'node:fs/promises'
 import type { AppSnapshot, ModelConfig } from '../../src/shared/agent'
@@ -31,6 +32,7 @@ export async function createTestAgent(
 ) {
   let probe: ModelProbe = async () => ({ text: true, streaming: true, tools: true })
   const application = await createApplication({
+    ...applicationPlatform(),
     userData: files.directory,
     executor,
     modelFactory,

@@ -1,10 +1,15 @@
-import { HdcAdapter } from '../adapters/device/hdcAdapter'
-import { ChromeAdapter } from '../adapters/browser/chromeAdapter'
-import { ExternalLinkAdapter } from '../adapters/electron/externalLinkAdapter'
+import type { ApplicationServices } from '../contracts/application'
+import type {
+  FileSystemPort,
+  HdcPort,
+  ChromePort,
+  ExternalLinkPort,
+  FolderDialogPort
+} from '../contracts/ports'
+import { WorkspaceService } from '../services/workspaceService'
 import { DeviceService } from '../services/deviceService'
 import { WebviewService } from '../services/webviewService'
 import { VideoService } from '../services/videoService'
-import { FileSystemAdapter } from '../adapters/filesystem/fileSystemAdapter'
 import type { AppSnapshot, ModelConfig } from '../../shared/agent'
 import type { ModelAdapter, SecretVault, ModelProbe } from '../contracts/agent'
 import { AgentRunner } from '../services/agent/runner'
@@ -23,15 +28,21 @@ import { SnapshotService } from '../services/agent/snapshotService'
 import { ToolExecutor } from '../services/tools/executor'
 import { createRegistry } from '../services/tools/registry'
 
-export interface ApplicationServices {
+interface ComposedServices extends ApplicationServices {
   sessions: SessionService
   chat: ChatService
   config: ModelConfigService
   tools: ToolService
   snapshots: SnapshotService
+  workspace: WorkspaceService
 }
 export interface ApplicationOptions {
   userData: string
+  files: FileSystemPort
+  hdc: HdcPort
+  chrome: ChromePort
+  external: ExternalLinkPort
+  dialog: FolderDialogPort
   vault: SecretVault
   modelFactory: (config: ModelConfig, key: string) => ModelAdapter
   probe: ModelProbe
@@ -43,7 +54,7 @@ export interface ApplicationOptions {
 
 export async function createApplication(
   options: ApplicationOptions
-): Promise<{ services: ApplicationServices; shutdown(): Promise<void> }> {
+): Promise<{ services: ComposedServices; shutdown(): Promise<void> }> {
   const storage = await prepareStorage(options.userData, options.settingsFactory)
   storage.database.update((data) => Object.assign(data, recoverAgentData(data)))
   let warning = storage.warnings.join('\n') || undefined
@@ -68,14 +79,12 @@ export async function createApplication(
     (): boolean => closing || chat.activeSessionId() !== null,
     changed
   )
-  const hdc = new HdcAdapter()
-  const devices = new DeviceService(hdc)
-  const webview = new WebviewService(devices, hdc, new ChromeAdapter(), new ExternalLinkAdapter())
+  const devices = new DeviceService(options.hdc)
+  const webview = new WebviewService(devices, options.hdc, options.chrome, options.external)
+  const video = new VideoService(options.files)
+  const workspace = new WorkspaceService(options.dialog)
   const tools = new ToolService(
-    options.executor ??
-      new ToolExecutor(
-        createRegistry({ video: new VideoService(new FileSystemAdapter()), devices, webview })
-      ),
+    options.executor ?? new ToolExecutor(createRegistry({ video, devices, webview })),
     executions,
     persistence,
     changed
@@ -102,7 +111,7 @@ export async function createApplication(
   )
   notification.snapshots = snapshots
   let shutdownRun: Promise<void> | undefined
-  const services = { sessions, config, tools, chat, snapshots }
+  const services = { sessions, config, tools, chat, snapshots, workspace }
   return {
     services,
     shutdown: () => {

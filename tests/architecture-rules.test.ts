@@ -9,6 +9,8 @@ test('boundary rules reject actual static dynamic and runtime dependencies', () 
     "const fs = require('fs')",
     'fetch(url)',
     'globalThis.fetch(url)',
+    'const send = fetch; send(url)',
+    'import(moduleName)',
     "export { value } from '../adapters/value'",
     "import type { Storage } from '../adapters/value'",
     "import { createApplication } from '../bootstrap/createApplication'"
@@ -27,6 +29,16 @@ test('boundary rules reject actual static dynamic and runtime dependencies', () 
   )
   assert.notEqual(
     violations('src/main/ipc/bad.ts', "const { shell } = require('electron')").length,
+    0
+  )
+  assert.notEqual(
+    violations('src/main/ipc/bad.ts', "import { dialog as ipcMain } from 'electron'").length,
+    0
+  )
+  assert.notEqual(violations('src/main/utils/bad.ts', 'const cache = new Map()').length, 0)
+  assert.notEqual(
+    violations('src/main/index.ts', "import { VideoService } from './services/videoService'")
+      .length,
     0
   )
   assert.notEqual(violations('src/main/utils/bad.ts', "import fs from 'node:fs'").length, 0)

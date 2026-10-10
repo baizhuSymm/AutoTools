@@ -1,4 +1,10 @@
-import { BrowserWindow, app, shell } from 'electron'
+import { WindowAdapter } from './adapters/electron/windowAdapter'
+import { FileSystemAdapter } from './adapters/filesystem/fileSystemAdapter'
+import { HdcAdapter } from './adapters/device/hdcAdapter'
+import { ChromeAdapter } from './adapters/browser/chromeAdapter'
+import { ExternalLinkAdapter } from './adapters/electron/externalLinkAdapter'
+import { DialogAdapter } from './adapters/electron/dialogAdapter'
+import { app } from 'electron'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import icon from '../../resources/AppIcon.png?asset'
@@ -11,7 +17,6 @@ import { createModel, testModel } from './adapters/model/langchainAdapter'
 app.setName('AutoTools')
 if (process.env['AUTOTOOLS_USER_DATA']) app.setPath('userData', process.env['AUTOTOOLS_USER_DATA'])
 
-let mainWindow: BrowserWindow | null = null
 let shutdown: (() => Promise<void>) | undefined
 let exiting = false
 function getPreloadPath(): string {
@@ -24,80 +29,37 @@ function getRendererURL(): string {
   }
   return pathToFileURL(join(__dirname, '../renderer/index.html')).href
 }
-function createMainWindow(): void {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 700,
-    minHeight: 560,
-    show: false,
-    autoHideMenuBar: true,
-    title: 'AutoTools',
-    icon,
-    webPreferences: {
-      preload: getPreloadPath(),
-      sandbox: false
-    }
-  })
-  mainWindow.on('ready-to-show', () => {
-    mainWindow?.show()
-  })
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    if (/^https?:\/\//i.test(details.url)) void shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (url.split('#')[0] !== getRendererURL().split('#')[0]) event.preventDefault()
-  })
-  mainWindow.loadURL(getRendererURL())
-  mainWindow.on('closed', () => {
-    mainWindow = null
-  })
-}
 app.whenReady().then(async () => {
   if (process.platform === 'win32') {
     app.setAppUserModelId(app.isPackaged ? 'com.electron.auto-tools' : process.execPath)
   }
-  // F12 切换 DevTools；打包后禁用 Ctrl+R 刷新
-  app.on('browser-window-created', (_, window) => {
-    window.webContents.on('before-input-event', (event, input) => {
-      if (input.type === 'keyDown' && input.code === 'F12') {
-        if (window.webContents.isDevToolsOpened()) {
-          window.webContents.closeDevTools()
-        } else {
-          window.webContents.openDevTools({ mode: 'undocked' })
-        }
-        event.preventDefault()
-      }
-      if (app.isPackaged && input.code === 'KeyR' && (input.control || input.meta)) {
-        event.preventDefault()
-      }
-    })
+  const windows = new WindowAdapter({
+    preloadPath: getPreloadPath(),
+    rendererURL: getRendererURL(),
+    icon
   })
   const application = await createApplication({
     userData: app.getPath('userData'),
+    files: new FileSystemAdapter(),
+    hdc: new HdcAdapter(),
+    chrome: new ChromeAdapter(),
+    external: new ExternalLinkAdapter(),
+    dialog: new DialogAdapter(),
     vault: createSecretVault(),
     modelFactory: createModel,
     probe: testModel,
     publish: createSnapshotPublisher(),
     diagnose: (message) => console.error(message)
   })
-  const unregister = registerAgentIpc(application.services, (event) =>
-    Boolean(
-      mainWindow &&
-      event.sender === mainWindow.webContents &&
-      event.senderFrame === event.sender.mainFrame &&
-      event.senderFrame?.url.split('#')[0] === getRendererURL().split('#')[0]
-    )
-  )
+  const unregister = registerAgentIpc(application.services, (event) => windows.isTrusted(event))
   shutdown = async () => {
     unregister()
     await application.shutdown()
   }
   console.log('[main] ipc handlers registered')
-  createMainWindow()
+  windows.create()
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+    if (!windows.hasWindow()) windows.create()
   })
 })
 app.on('before-quit', (event) => {

@@ -39,6 +39,19 @@ Crash monitoring has been removed. Old `tasks` fields are ignored during loading
 again; conversations, model configuration and tool history remain intact. Old profiles and backups
 are not deleted, and previously exported files are not touched.
 
+## Main Process Layers
+
+The main process follows `IPC -> Service -> Adapter`. `ipc/` validates callers and inputs;
+`services/` owns Agent, video, device and WebView workflows; `adapters/` encapsulates Electron,
+HDC, Chrome, LangChain, filesystem operations and library-backed persistence. `contracts/`
+defines small dependency interfaces, `utils/` holds pure helpers, and `bootstrap/` creates
+the shared instances and controls shutdown.
+
+Video scan references belong to one VideoService per application, shared by chat and manual
+tools. SessionService clips complete history turns; repositories only perform explicit reads
+and writes. Dependency-boundary tests reject native I/O and concrete adapters in services,
+and reverse service imports in adapters. See the [reading guide](docs/agent-layering-guide.md).
+
 ## Recommended IDE Setup
 
 - [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)

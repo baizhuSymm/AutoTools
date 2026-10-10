@@ -158,7 +158,7 @@ test('real directory-link replacement is rejected after preview', async (context
     try {
       await symlink(elsewhere, target, process.platform === 'win32' ? 'junction' : 'dir')
     } catch (error) {
-      if (['EPERM', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) {
+        if (['EPERM', 'EACCES'].includes((error as { code?: string }).code ?? '')) {
         context.skip('OS does not allow directory links')
         return
       }

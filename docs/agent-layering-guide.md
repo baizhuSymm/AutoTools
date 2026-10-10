@@ -11,7 +11,9 @@ ChatPage
   -> ChatService.send：并发保护，创建本轮执行
   -> SessionService.beginTurn：添加用户消息和助手消息
   -> AgentRunner.run：调用模型、处理思考、循环调用工具
-  -> ToolService.executeForTurn：交给原 ToolExecutor 校验、确认、执行
+  -> ToolService.executeForTurn：交给 ToolExecutor 校验、确认、执行
+  -> Registry：按工具名称绑定 VideoService / DeviceService / WebviewService
+  -> Adapter：执行文件、设备、浏览器等外部操作，返回实际结果
   -> SessionService.updateMessage：根据消息 ID 更新结果
   -> Repository：修改所属数据集合
   -> PersistenceCoordinator：合并保存或显式等待保存
@@ -25,26 +27,42 @@ ChatPage
 
 | 你想修改什么 | 主要文件 |
 | --- | --- |
-| 新增或校验 IPC 参数 | `src/main/ipc/agentIpc.ts` |
-| 创建、删除会话，记录消息 | `src/main/services/sessionService.ts` |
-| 发送、取消，删除正在执行的会话 | `src/main/services/chatService.ts` |
-| 模型配置、连接测试、密钥 | `src/main/services/modelConfigService.ts` |
-| 手动工具与会话工具执行记录 | `src/main/services/toolService.ts` |
-| 给前端哪些状态、多久发布 | `src/main/services/snapshotService.ts` |
-| 模型与工具的执行循环 | `src/main/agent/runner.ts` |
-| 模型 SDK 接入 | `src/main/agent/model.ts` |
-| 数据集合的读写 | `src/main/repositories/` |
-| 文件保存、迁移、恢复 | `src/main/storage/` |
+| IPC 来源、参数和路由 | `src/main/ipc/agentIpc.ts`、`schemas.ts` |
+| 创建、删除会话，记录消息及裁剪完整历史 | `src/main/services/agent/sessionService.ts` |
+| 发送、取消，删除正在执行的会话 | `src/main/services/agent/chatService.ts` |
+| 模型配置、连接测试、密钥使用规则 | `src/main/services/agent/modelConfigService.ts` |
+| 手动工具与会话工具执行记录 | `src/main/services/tools/toolService.ts` |
+| 给前端哪些状态、多久发布 | `src/main/services/agent/snapshotService.ts` |
+| 模型与工具的执行循环、业务提示词 | `src/main/services/agent/runner.ts`、`systemPrompt.ts` |
+| 模型 SDK、reasoning 协议及工具名转换 | `src/main/adapters/model/langchainAdapter.ts` |
+| 视频扫描缓存、分页、移动安全规则 | `src/main/services/videoService.ts` |
+| 设备在线检查、应用查询回退 | `src/main/services/deviceService.ts` |
+| WebView 探测、转发、打开端点流程 | `src/main/services/webviewService.ts` |
+| 工具声明、参数 schema、审批类别和绑定 | `src/main/services/tools/registry.ts` |
+| 原生文件操作、HDC 进程和 Chrome 启动 | `src/main/adapters/filesystem/`、`device/`、`browser/` |
+| 数据集合的读写 | `src/main/adapters/storage/repositories/` |
+| 文件保存、结构校验与迁移 | `src/main/adapters/storage/` |
+| 中断消息恢复、旧审批权限清除 | `src/main/services/agent/recovery.ts` |
 | 实例组装、启动、退出顺序 | `src/main/bootstrap/createApplication.ts` |
-| Electron 加密与窗口事件 | `src/main/infrastructure/` |
+| Electron 加密、目录选择、发布与窗口事件 | `src/main/adapters/electron/` |
+| 主进程内部协议和外部依赖接口 | `src/main/contracts/` |
+| 无 I/O 的路径及设备输出解析 | `src/main/utils/` |
 
 IPC 不创建 Runtime 或存储。Runner 不知道 BrowserWindow、会话 CRUD 或磁盘。SnapshotService 不保存数据。Repository 不调用工具，也不执行审批。
+
+业务服务不能导入 Electron、fs、child_process、LangChain 或具体 Adapter，也不能直接 fetch；Adapter 不能反向导入 Service。`tests/architecture.test.ts` 检查真实源码依赖，规则本身有静态、动态、别名和反向依赖负例。
+
+例如目录选择的链路是 `agentIpc -> WorkspaceService -> DialogAdapter -> dialog.showOpenDialog`。IPC 不处理原生弹窗结果细节，用户取消由 Adapter 映射为 null，公共 API 保持不变。
 
 ## 状态怎么修改
 
 服务是业务修改入口；Repository 持有数据访问权限。读取返回副本，修改副本不会修改真实状态。SessionService 用明确的会话 ID 和消息 ID 更新，不假定最后一条消息就是当前目标。
 
 ChatService 持有当前对话的 AbortController；ToolService 持有手动调用的控制器；ToolExecutor 持有一次性确认。它们不属于存储，也不会在重启后复活。
+
+VideoService 持有最多 20 个扫描记录；工具注册表没有扫描 Map。同一 bootstrap 将一个实例绑定到聊天和手动工具，所以两边可以使用同一 scanId；另一个应用实例不能读取这些内存引用。审批执行保留原 MovePlan，不在确认后重新挑选目标文件名。
+
+SessionService 保留最近 20 个完整模型轮次，Repository 不偷偷裁剪历史。ToolService 明确清理超过 200 条时可丢弃的终态记录，不为了达到数量上限删除活动审批。存储结构及展示快照、模型协议历史仍是不同的数据边界。
 
 ## 保存到哪里
 

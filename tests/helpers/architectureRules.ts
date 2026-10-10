@@ -11,7 +11,8 @@ export function violations(path: string, source: string): string[] {
     services: ['services', 'contracts', 'utils'],
     adapters: ['adapters', 'contracts', 'utils'],
     contracts: ['contracts'],
-    utils: ['utils', 'contracts']
+    utils: ['utils', 'contracts'],
+    'index.ts': ['bootstrap', 'ipc', 'adapters', 'contracts', 'utils']
   }
   const dependency = (value: string, node: ts.Node): void => {
     if (value.startsWith('.')) {
@@ -29,9 +30,9 @@ export function violations(path: string, source: string): string[] {
         !node.importClause?.name &&
         bindings.elements.every(
           (item) =>
-            item.name.text === 'ipcMain' ||
+            (item.propertyName ?? item.name).text === 'ipcMain' ||
             ((item.isTypeOnly || node.importClause?.isTypeOnly) &&
-              ['IpcMain', 'IpcMainInvokeEvent'].includes(item.name.text))
+              ['IpcMain', 'IpcMainInvokeEvent'].includes((item.propertyName ?? item.name).text))
         )
       )
         return
@@ -55,6 +56,26 @@ export function violations(path: string, source: string): string[] {
   }
   const visit = (node: ts.Node): void => {
     if (
+      ['services', 'utils', 'ipc', 'contracts'].includes(layer ?? '') &&
+      ts.isIdentifier(node) &&
+      node.text === 'fetch'
+    )
+      errors.push(`${path}: fetch belongs to an adapter`)
+    if (
+      layer === 'utils' &&
+      ts.isVariableStatement(node) &&
+      node.parent === file &&
+      (!(node.declarationList.flags & ts.NodeFlags.Const) ||
+        node.declarationList.declarations.some(
+          (item) =>
+            item.initializer &&
+            ts.isNewExpression(item.initializer) &&
+            ts.isIdentifier(item.initializer.expression) &&
+            ['Map', 'Set'].includes(item.initializer.expression.text)
+        ))
+    )
+      errors.push(`${path}: mutable module state does not belong in utils`)
+    if (
       (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
       node.moduleSpecifier &&
       ts.isStringLiteral(node.moduleSpecifier)
@@ -62,6 +83,13 @@ export function violations(path: string, source: string): string[] {
       dependency(node.moduleSpecifier.text, node)
     if (ts.isCallExpression(node)) {
       const expression = node.expression
+      if (
+        (expression.kind === ts.SyntaxKind.ImportKeyword ||
+          (ts.isIdentifier(expression) && expression.text === 'require')) &&
+        ['services', 'utils', 'ipc', 'contracts'].includes(layer ?? '') &&
+        (!node.arguments[0] || !ts.isStringLiteral(node.arguments[0]))
+      )
+        errors.push(`${path}: computed imports cannot bypass dependency boundaries`)
       if (
         (expression.kind === ts.SyntaxKind.ImportKeyword ||
           (ts.isIdentifier(expression) && expression.text === 'require')) &&

@@ -1,3 +1,4 @@
+import { applicationPlatform } from './helpers/applicationPlatform'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -20,6 +21,7 @@ test('a final disk failure marks the answer failed without replaying tool effect
   let effects = 0
   let requests = 0
   const app = await createApplication({
+    ...applicationPlatform(),
     userData: dir,
     settingsFactory: fileSettings,
     vault: { encrypt: () => null, decrypt: () => '' },
@@ -68,6 +70,7 @@ test('application composition persists sessions and drains shutdown', async () =
   const dir = await mkdtemp(join(tmpdir(), 'application-'))
   try {
     const options = {
+      ...applicationPlatform(),
       userData: dir,
       vault: { encrypt: () => null, decrypt: () => '' },
       modelFactory: () => ({
