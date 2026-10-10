@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-10-main-process-layering-design.md`
 
-**执行状态：** 七项任务及独立审查修复已完成。94/94 测试、主/渲染进程类型检查、ESLint、生产构建、修复后的开发/生产/Windows 打包版 Electron smoke 通过。GitHub 集成正在收尾。
+**执行状态：** 七项任务及独立审查修复已完成。94/94 测试、主/渲染进程类型检查、ESLint、生产构建、修复后的开发/生产/Windows 打包版 Electron smoke 通过。已合并并推送 main，本次临时分支已删除。
 
 ## Global Constraints
 
@@ -242,14 +242,14 @@ try {
 预期三个模式都验证真实 Electron 页面、聊天 reasoning、审批后移动临时视频及重启持久化；旧监控入口不存在。HDC/云端仍注明未实机验证。任何测试失败先用 systematic-debugging 定位，不能跳过、削弱断言或只报告构建通过。
 
 - [x] **Step 7: 独立审查与提交。** 使用 requesting-code-review，请新审查者检查整次重构及五个 Review Focus，修复发现后复跑相关检查。提交 `refactor: wire layered main process and enforce boundaries`；只有实际证据齐全才标记任务完成，记录测试数、smoke 模式与残留限制。
-- [ ] **Step 8: 集成 GitHub。** 使用 finishing-a-development-branch，遵循已选流程：合并 main、push origin main，确认本地 HEAD 与远端 main 相等，再删除本次已合并功能分支。若直接在 main 实施则仅推送，不制造分支。最终 git status 应只保留用户原未跟踪文档，不做强制推送或删除无关内容。
+- [x] **Step 8: 集成 GitHub。** 使用 finishing-a-development-branch，遵循已选流程：合并 main、push origin main，确认本地 HEAD 与远端 main 相等，再删除本次已合并功能分支。若直接在 main 实施则仅推送，不制造分支。最终 git status 应只保留用户原未跟踪文档，不做强制推送或删除无关内容。
 
 ## 自审与执行交接
 
 已将设计第 1-9 节映射至上述任务：契约与边界为任务 1/7，外部能力为任务 2，视频为任务 3，设备/WebView/注册为任务 4，Agent 状态与存储恢复为任务 5，模型协议为任务 6，共享实例、退出及交付为任务 7。
 五项 Review Focus 均有明确测试；任务间方法名及类型以本计划接口块为准。每个阶段维持现有入口可运行，最终一次切换后清除旧实现，没有永久兼容转发层。
 
-用户选择在当前会话按顺序实施；七项代码任务已提交，独立审查发现的问题已修复，最终验证和 main 集成正在收尾。各任务接口依赖较强，实施中未并行修改同一组装入口。
+用户选择在当前会话按顺序实施；七项代码任务已提交，独立审查发现的问题已修复，最终验证和 main 集成已完成。各任务接口依赖较强，实施中未并行修改同一组装入口。
 
 ## 执行与审查记录
 
@@ -263,6 +263,7 @@ try {
 - 设备断开/取消/异常现在返回带 `completed`、`failedStep` 的真实失败/取消结果，且不执行下一原生命令。移动预检查失败现在保留源、原批准目标、错误、copied=false 及未执行数量；抢占时仍不覆盖、不删除源、不自动换名。
 - 未运行真实设备 HDC 或云端模型验证；设备用具名端口替身、模型用本地 HTTP provider。Windows 真实目录 junction 变化测试实际通过。
 - 用户原未跟踪 `docs/agent-state-data-design.md` 未修改、未提交；配置、密钥、构建产物未纳入 Git。
+- `main` 已快进合并至 `2e76db1`，合并后 94/94 复测通过，push 与远端 SHA 核对成功。仅删除本次 `codex/main-process-layering` 分支；远端未创建该功能分支。本文完成状态随后作为 main 文档提交同步。
 
 ### 实施判断
 
