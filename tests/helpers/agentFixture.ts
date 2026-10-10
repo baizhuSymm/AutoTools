@@ -4,7 +4,7 @@ import type { AppSnapshot, ModelConfig } from '../../src/shared/agent'
 import type { ModelAdapter, SecretVault } from '../../src/main/contracts/agent'
 import type { ModelProbe } from '../../src/main/services/modelConfigService'
 import { createApplication } from '../../src/main/bootstrap/createApplication'
-import type { ToolExecutor } from '../../src/main/tools/executor'
+import type { ToolExecutor } from '../../src/main/services/tools/executor'
 import { fileSettings } from './storageFixture'
 
 export function testFiles(path: string) {

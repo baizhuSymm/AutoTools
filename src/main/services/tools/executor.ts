@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import type { ToolDefinition } from '../contracts/agent'
-import type { ToolCall, ToolResult } from '../../shared/agent'
+import type { ToolDefinition } from '../../contracts/agent'
+import type { ToolCall, ToolResult } from '../../../shared/agent'
 
 export interface ExecutionContext {
   scope: string

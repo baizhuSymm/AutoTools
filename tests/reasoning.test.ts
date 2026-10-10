@@ -6,7 +6,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
-import { ToolExecutor } from '../src/main/tools/executor'
+import { ToolExecutor } from '../src/main/services/tools/executor'
 
 import { splitReasoning } from '../src/shared/reasoning'
 

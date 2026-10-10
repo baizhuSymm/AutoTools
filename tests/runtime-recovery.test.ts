@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { z } from 'zod'
 
-import { ToolExecutor, type ToolDefinition } from '../src/main/tools/executor'
+import { ToolExecutor, type ToolDefinition } from '../src/main/services/tools/executor'
 
 async function fixture(run: (directory: string) => Promise<void>) {
   const directory = await mkdtemp(join(tmpdir(), 'agent-recovery-'))

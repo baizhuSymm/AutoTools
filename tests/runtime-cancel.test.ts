@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { z } from 'zod'
 
-import { ToolExecutor } from '../src/main/tools/executor'
+import { ToolExecutor } from '../src/main/services/tools/executor'
 
 test('rejecting a call stops later calls in the same model response', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'agent-reject-'))

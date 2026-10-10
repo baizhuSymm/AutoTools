@@ -13,7 +13,7 @@ import { ConfigRepository } from '../src/main/repositories/configRepository'
 import { ExecutionRepository } from '../src/main/repositories/executionRepository'
 import { prepareStorage } from '../src/main/storage/migration'
 import { PersistenceCoordinator } from '../src/main/storage/persistenceCoordinator'
-import { ToolExecutor } from '../src/main/tools/executor'
+import { ToolExecutor } from '../src/main/services/tools/executor'
 import { AgentRunner } from '../src/main/agent/runner'
 import { fileSettings } from './helpers/storageFixture'
 

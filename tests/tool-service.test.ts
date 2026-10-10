@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { AgentDatabase } from '../src/main/storage/agentDatabase'
 import { ExecutionRepository } from '../src/main/repositories/executionRepository'
 import { PersistenceCoordinator } from '../src/main/storage/persistenceCoordinator'
-import { ToolExecutor } from '../src/main/tools/executor'
+import { ToolExecutor } from '../src/main/services/tools/executor'
 import { ToolService } from '../src/main/services/toolService'
 
 test('unavailable persistence blocks manual tools before preparation or approval', async () => {

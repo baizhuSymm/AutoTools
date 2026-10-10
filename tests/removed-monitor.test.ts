@@ -1,17 +1,16 @@
-import { VideoService } from '../src/main/services/videoService'
-import { FileSystemAdapter } from '../src/main/adapters/filesystem/fileSystemAdapter'
+import { toolServices } from './helpers/toolServices'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { createRegistry } from '../src/main/tools/registry'
-import { ToolExecutor } from '../src/main/tools/executor'
+import { createRegistry } from '../src/main/services/tools/registry'
+import { ToolExecutor } from '../src/main/services/tools/executor'
 import { AgentDatabase } from '../src/main/storage/agentDatabase'
 import { parseAgentData, parseLegacy } from '../src/main/storage/schema'
 
 test('removed monitoring tools are not registered and cannot be executed', async () => {
-  const definitions = createRegistry(new VideoService(new FileSystemAdapter()))
+  const definitions = createRegistry(toolServices())
   assert.equal(
     definitions.some((tool) => tool.name.startsWith('crash.')),
     false

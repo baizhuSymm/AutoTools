@@ -1,12 +1,11 @@
 import { z } from 'zod'
 import { isAbsolute } from 'node:path'
-import { shell } from 'electron'
-import { execHdc, getForegroundBundle, listInstalledBundles } from '../services/hdcService'
-import { detectChromePath, launchChrome } from '../services/chromeService'
-import type { VideoService } from '../services/videoService'
-import type { MovePlan } from '../contracts/video'
-import type { ToolResult } from '../../shared/agent'
-import type { PreparedTool, ToolDefinition } from '../contracts/agent'
+import type { VideoService } from '../videoService'
+import type { DeviceService } from '../deviceService'
+import type { WebviewService } from '../webviewService'
+import type { MovePlan } from '../../contracts/video'
+import type { ToolResult } from '../../../shared/agent'
+import type { ToolDefinition } from '../../contracts/agent'
 
 const pathSchema = z.string().trim().min(1).refine(isAbsolute, '需要绝对目录路径')
 const deviceSchema = z
@@ -21,10 +20,6 @@ const bundleSchema = z
   .regex(/^[a-zA-Z0-9_.]+$/)
 const portSchema = z.number().int().min(1).max(65535)
 const deviceInput = z.object({ deviceId: deviceSchema })
-
-export function hasForwardPort(output: string, port: number): boolean {
-  return new RegExp(`\\btcp:${port}(?!\\d)`).test(output)
-}
 
 function define<S extends z.ZodType<Record<string, unknown>>, P>(
   name: string,
@@ -49,28 +44,15 @@ const success = (summary: string, data?: unknown): ToolResult => ({
   data
 })
 
-export async function listDevices(signal?: AbortSignal): Promise<string[]> {
-  const result = await execHdc(['list', 'targets'], { signal })
-  if (result.code !== 0) throw new Error(result.stderr || '设备查询失败')
-  return result.stdout
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !/empty|no devices|\[Fail\]/i.test(line))
-}
-async function verifyDevice(deviceId: string, signal?: AbortSignal): Promise<void> {
-  if (!(await listDevices(signal)).includes(deviceId)) throw new Error('设备已断开，请重新选择设备')
-}
-async function command(deviceId: string, args: string[], signal: AbortSignal): Promise<ToolResult> {
-  await verifyDevice(deviceId, signal)
-  const result = await execHdc(['-t', deviceId, ...args], { signal })
-  return {
-    status: result.code === 0 ? 'succeeded' : signal.aborted ? 'cancelled' : 'failed',
-    summary: result.code === 0 ? '设备操作已完成' : result.stderr || `退出码 ${result.code}`,
-    data: result
-  }
-}
-
-export function createRegistry(video: VideoService): ToolDefinition[] {
+export function createRegistry({
+  video,
+  devices,
+  webview
+}: {
+  video: VideoService
+  devices: DeviceService
+  webview: WebviewService
+}): ToolDefinition[] {
   const direct = async (
     title: string,
     input: Record<string, unknown>
@@ -139,7 +121,7 @@ export function createRegistry(video: VideoService): ToolDefinition[] {
       '列出已连接设备；多台设备需要用户指定设备 ID。',
       z.object({}),
       false,
-      async (_, signal) => success('设备列表', await listDevices(signal))
+      async (_, signal) => success('设备列表', await devices.list(signal))
     ),
     deviceOperation(
       'device.list_apps',
@@ -147,9 +129,7 @@ export function createRegistry(video: VideoService): ToolDefinition[] {
       deviceInput,
       false,
       async (input, signal) => {
-        await verifyDevice(String(input.deviceId), signal)
-        const bundles = await listInstalledBundles(String(input.deviceId), signal)
-        signal.throwIfAborted()
+        const bundles = await devices.listApps(String(input.deviceId), signal)
         return success(`已安装 ${bundles.length} 个应用`, bundles)
       }
     ),
@@ -159,9 +139,7 @@ export function createRegistry(video: VideoService): ToolDefinition[] {
       deviceInput,
       false,
       async (input, signal) => {
-        await verifyDevice(String(input.deviceId), signal)
-        const bundleName = await getForegroundBundle(String(input.deviceId), signal)
-        signal.throwIfAborted()
+        const bundleName = await devices.foregroundApp(String(input.deviceId), signal)
         return success(bundleName ? '已识别前台应用' : '无法识别前台应用', { bundleName })
       }
     ),
@@ -170,38 +148,14 @@ export function createRegistry(video: VideoService): ToolDefinition[] {
       '探测设备 WebView 进程、调试 socket 和现有端口转发。',
       deviceInput,
       false,
-      async (input, signal) => {
-        const deviceId = String(input.deviceId)
-        const output: Record<string, string[]> = {}
-        for (const [name, args] of [
-          ['processes', ['shell', 'ps', '-ef']],
-          ['sockets', ['shell', 'cat', '/proc/net/unix']],
-          ['forwarded', ['fport', 'ls']]
-        ] as const) {
-          const result = await command(deviceId, [...args], signal)
-          if (result.status !== 'succeeded')
-            return { ...result, data: { completed: output, failedStep: name } }
-          const data = result.data as { stdout: string }
-          output[name] = data.stdout
-            .split(/\r?\n/)
-            .filter((line) =>
-              name === 'forwarded' ? line.trim() : /webview|devtools|chromium/i.test(line)
-            )
-        }
-        return success('设备探测完成', output)
-      }
+      (input, signal) => webview.probe(String(input.deviceId), signal)
     ),
     deviceOperation(
       'webview.enable_debugging',
       '修改设备 WebView 调试属性，必须确认。',
       deviceInput,
       true,
-      (input, signal) =>
-        command(
-          String(input.deviceId),
-          ['shell', 'setprop', 'debug.webview.remote_debugging', 'true'],
-          signal
-        )
+      (input, signal) => webview.enableDebugging(String(input.deviceId), signal)
     ),
     deviceOperation(
       'webview.forward_port',
@@ -219,23 +173,20 @@ export function createRegistry(video: VideoService): ToolDefinition[] {
           )
       }),
       true,
-      async (input, signal) => {
-        const deviceId = String(input.deviceId)
-        const existing = await command(deviceId, ['fport', 'ls'], signal)
-        if (existing.status !== 'succeeded') return existing
-        if (hasForwardPort((existing.data as { stdout: string }).stdout, Number(input.port))) {
-          throw new Error('该端口已有转发，请选择其他端口或确认移除现有转发')
-        }
-        return command(deviceId, ['fport', `tcp:${input.port}`, String(input.socketName)], signal)
-      }
+      (input, signal) =>
+        webview.forwardPort(
+          String(input.deviceId),
+          Number(input.port),
+          String(input.socketName),
+          signal
+        )
     ),
     deviceOperation(
       'webview.remove_forward',
       '移除指定设备的端口转发，必须确认。',
       z.object({ deviceId: deviceSchema, port: portSchema }),
       true,
-      (input, signal) =>
-        command(String(input.deviceId), ['fport', 'rm', `tcp:${input.port}`], signal)
+      (input, signal) => webview.removeForward(String(input.deviceId), Number(input.port), signal)
     ),
     deviceOperation(
       'webview.open_endpoint',
@@ -246,20 +197,13 @@ export function createRegistry(video: VideoService): ToolDefinition[] {
         browser: z.enum(['default', 'chrome']).default('default')
       }),
       false,
-      async (input, signal) => {
-        const forwards = await command(String(input.deviceId), ['fport', 'ls'], signal)
-        if (forwards.status !== 'succeeded') return forwards
-        if (!hasForwardPort((forwards.data as { stdout: string }).stdout, Number(input.port)))
-          throw new Error('未找到指定端口的转发')
-        const url = `http://127.0.0.1:${input.port}/json/list`
-        signal.throwIfAborted()
-        if (input.browser === 'chrome') {
-          const chrome = detectChromePath()
-          if (!chrome) throw new Error('未检测到 Chrome')
-          await launchChrome(chrome, url)
-        } else await shell.openExternal(url)
-        return success('已打开调试端点', { url })
-      }
+      (input, signal) =>
+        webview.openEndpoint(
+          String(input.deviceId),
+          Number(input.port),
+          input.browser as 'default' | 'chrome',
+          signal
+        )
     )
   ]
 }

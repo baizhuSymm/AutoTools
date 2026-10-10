@@ -1,12 +1,12 @@
-import { VideoService } from '../src/main/services/videoService'
-import { FileSystemAdapter } from '../src/main/adapters/filesystem/fileSystemAdapter'
+import { hasForwardPort } from '../src/main/utils/deviceOutput'
+import { toolServices } from './helpers/toolServices'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { createRegistry, hasForwardPort } from '../src/main/tools/registry'
-import { ToolExecutor } from '../src/main/tools/executor'
+import { createRegistry } from '../src/main/services/tools/registry'
+import { ToolExecutor } from '../src/main/services/tools/executor'
 
 test('forward checks match the complete port rather than a numeric prefix', () => {
   assert.equal(hasForwardPort('tcp:92221 localabstract:test', 9222), false)
@@ -19,7 +19,7 @@ test('scan references can be queried in pages and filtered without rescanning', 
     await mkdir(join(directory, 'item'))
     for (let i = 0; i < 35; i++)
       await writeFile(join(directory, 'item', `video-${String(i).padStart(2, '0')}.mp4`), 'video')
-    const registry = createRegistry(new VideoService(new FileSystemAdapter()))
+    const registry = createRegistry(toolServices())
     const executor = new ToolExecutor(registry)
     const context = { scope: 'test', signal: new AbortController().signal, update: () => {} }
     const scan = await executor.execute('video.scan', { sourceDir: directory }, context)

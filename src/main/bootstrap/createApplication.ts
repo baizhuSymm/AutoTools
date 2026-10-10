@@ -1,3 +1,8 @@
+import { HdcAdapter } from '../adapters/device/hdcAdapter'
+import { ChromeAdapter } from '../adapters/browser/chromeAdapter'
+import { ExternalLinkAdapter } from '../adapters/electron/externalLinkAdapter'
+import { DeviceService } from '../services/deviceService'
+import { WebviewService } from '../services/webviewService'
 import { VideoService } from '../services/videoService'
 import { FileSystemAdapter } from '../adapters/filesystem/fileSystemAdapter'
 import type { AppSnapshot, ModelConfig } from '../../shared/agent'
@@ -15,8 +20,8 @@ import { ChatService } from '../services/chatService'
 import { ModelConfigService, type ModelProbe } from '../services/modelConfigService'
 import { ToolService } from '../services/toolService'
 import { SnapshotService } from '../services/snapshotService'
-import { ToolExecutor } from '../tools/executor'
-import { createRegistry } from '../tools/registry'
+import { ToolExecutor } from '../services/tools/executor'
+import { createRegistry } from '../services/tools/registry'
 
 export interface ApplicationServices {
   sessions: SessionService
@@ -63,8 +68,14 @@ export async function createApplication(
     (): boolean => closing || chat.activeSessionId() !== null,
     changed
   )
+  const hdc = new HdcAdapter()
+  const devices = new DeviceService(hdc)
+  const webview = new WebviewService(devices, hdc, new ChromeAdapter(), new ExternalLinkAdapter())
   const tools = new ToolService(
-    options.executor ?? new ToolExecutor(createRegistry(new VideoService(new FileSystemAdapter()))),
+    options.executor ??
+      new ToolExecutor(
+        createRegistry({ video: new VideoService(new FileSystemAdapter()), devices, webview })
+      ),
     executions,
     persistence,
     changed

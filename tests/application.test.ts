@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { createApplication } from '../src/main/bootstrap/createApplication'
 import { fileSettings } from './helpers/storageFixture'
 import { AgentDatabase } from '../src/main/storage/agentDatabase'
-import { ToolExecutor } from '../src/main/tools/executor'
+import { ToolExecutor } from '../src/main/services/tools/executor'
 import { z } from 'zod'
 
 test('a final disk failure marks the answer failed without replaying tool effects', async (context) => {

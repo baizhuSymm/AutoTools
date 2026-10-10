@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { z } from 'zod'
 
-import { ToolExecutor } from '../src/main/tools/executor'
+import { ToolExecutor } from '../src/main/services/tools/executor'
 
 test('fake model requests flow through actual approval executor and persist a completed turn', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'agent-runtime-'))
