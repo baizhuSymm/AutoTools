@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { SettingsStore, emptySettings } from '../src/main/storage/settingsStore'
-import { ConfigRepository } from '../src/main/repositories/configRepository'
-import { ModelConfigService } from '../src/main/services/modelConfigService'
+import { SettingsStore, emptySettings } from '../src/main/adapters/storage/settingsStore'
+import { ConfigRepository } from '../src/main/adapters/storage/repositories/configRepository'
+import { ModelConfigService } from '../src/main/services/agent/modelConfigService'
 
 test('a resolved old probe cannot pair an old endpoint with a newly saved key', async () => {
   let body: Record<string, unknown> = emptySettings()

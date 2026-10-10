@@ -6,8 +6,8 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createRegistry } from '../src/main/services/tools/registry'
 import { ToolExecutor } from '../src/main/services/tools/executor'
-import { AgentDatabase } from '../src/main/storage/agentDatabase'
-import { parseAgentData, parseLegacy } from '../src/main/storage/schema'
+import { AgentDatabase } from '../src/main/adapters/storage/agentDatabase'
+import { parseAgentData, parseLegacy } from '../src/main/adapters/storage/schema'
 
 test('removed monitoring tools are not registered and cannot be executed', async () => {
   const definitions = createRegistry(toolServices())

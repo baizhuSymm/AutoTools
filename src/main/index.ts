@@ -4,8 +4,8 @@ import { pathToFileURL } from 'node:url'
 import icon from '../../resources/AppIcon.png?asset'
 import { registerAgentIpc } from './ipc/agentIpc'
 import { createApplication } from './bootstrap/createApplication'
-import { createSecretVault } from './infrastructure/secretVault'
-import { createSnapshotPublisher } from './infrastructure/snapshotPublisher'
+import { createSecretVault } from './adapters/electron/secretVault'
+import { createSnapshotPublisher } from './adapters/electron/snapshotPublisher'
 import { createModel, testModel } from './agent/model'
 
 app.setName('AutoTools')

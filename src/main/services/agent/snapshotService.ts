@@ -1,4 +1,4 @@
-import type { AppSnapshot, Conversation, ToolCall, ModelConfig } from '../../shared/agent'
+import type { AppSnapshot, Conversation, ToolCall, ModelConfig } from '../../../shared/agent'
 
 export interface SnapshotSources {
   conversations: () => Conversation[]

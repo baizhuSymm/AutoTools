@@ -1,13 +1,8 @@
 import { z } from 'zod'
-import type { Conversation, ModelConfig, ToolCall } from '../../shared/agent'
-import type { HistoryTurns } from '../contracts/agent'
+import type { AgentRecords, StoredConfig } from '../../contracts/agent'
 
-export type StoredConfig = Omit<ModelConfig, 'hasKey' | 'keyPersistent'>
-export interface AgentData {
+export interface AgentData extends AgentRecords {
   version: 1
-  conversations: Conversation[]
-  history: Record<string, HistoryTurns>
-  calls: ToolCall[]
 }
 export interface MigrationRecord {
   kind: 'fresh' | 'legacy'

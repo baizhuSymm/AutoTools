@@ -4,11 +4,52 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { z } from 'zod'
-import { AgentDatabase } from '../src/main/storage/agentDatabase'
-import { ExecutionRepository } from '../src/main/repositories/executionRepository'
-import { PersistenceCoordinator } from '../src/main/storage/persistenceCoordinator'
+import { AgentDatabase } from '../src/main/adapters/storage/agentDatabase'
+import { ExecutionRepository } from '../src/main/adapters/storage/repositories/executionRepository'
+import { PersistenceCoordinator } from '../src/main/adapters/storage/persistenceCoordinator'
 import { ToolExecutor } from '../src/main/services/tools/executor'
-import { ToolService } from '../src/main/services/toolService'
+import { ToolService } from '../src/main/services/tools/toolService'
+import { memoryRepositories } from './helpers/memoryRepositories'
+
+test('tool service prunes terminal records without deleting active approvals', async () => {
+  for (const hasTerminal of [false, true]) {
+    const { executions } = memoryRepositories()
+    for (let i = 0; i < 200; i++)
+      executions.upsert({
+        id: String(i),
+        scope: 'manual',
+        name: 'read',
+        title: 'read',
+        status: hasTerminal && i === 0 ? 'succeeded' : 'awaiting_confirmation'
+      })
+    const service = new ToolService(
+      new ToolExecutor([
+        {
+          name: 'read',
+          description: '',
+          schema: z.object({}),
+          confirm: false,
+          prepare: async () => ({ title: 'read', details: {}, data: {} }),
+          execute: async () => ({ status: 'succeeded', summary: 'ok' })
+        }
+      ]),
+      executions,
+      { schedule: () => {}, commit: async () => {} },
+      () => {}
+    )
+    assert.equal((await service.execute('read', {})).status, 'succeeded')
+    assert.equal(executions.calls().length, 200)
+    assert.equal(
+      executions.calls().filter((call) => call.status === 'awaiting_confirmation').length,
+      hasTerminal ? 199 : 200
+    )
+    assert.equal(
+      executions.calls().some((call) => call.id === '0'),
+      !hasTerminal
+    )
+    await service.close()
+  }
+})
 
 test('unavailable persistence blocks manual tools before preparation or approval', async () => {
   const db = AgentDatabase.unavailable('migration blocked')

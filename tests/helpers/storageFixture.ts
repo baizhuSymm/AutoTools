@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { SettingsBackendFactory } from '../../src/main/storage/settingsStore'
+import type { SettingsBackendFactory } from '../../src/main/adapters/storage/settingsStore'
 
 // 纯 Node 测试替身；Electron smoke 另行验证真实 electron-store。
 export const fileSettings: SettingsBackendFactory = async (directory) => {

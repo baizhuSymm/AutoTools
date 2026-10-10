@@ -1,5 +1,5 @@
 import { safeStorage } from 'electron'
-import type { SecretVault } from '../contracts/agent'
+import type { SecretVault } from '../../contracts/agent'
 
 export function createSecretVault(): SecretVault {
   return {

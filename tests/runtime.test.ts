@@ -1,6 +1,6 @@
 import { createTestAgent, testFiles } from './helpers/agentFixture'
 import type { ModelAdapter, WireMessage } from '../src/main/contracts/agent'
-import { boundedHistory } from '../src/main/agent/history'
+import { boundedHistory } from '../src/main/services/agent/history'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { mkdtemp, rm } from 'node:fs/promises'

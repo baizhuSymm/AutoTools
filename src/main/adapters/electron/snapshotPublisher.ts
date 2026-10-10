@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron'
-import { AgentChannels, type AppSnapshot } from '../../shared/agent'
+import { AgentChannels, type AppSnapshot } from '../../../shared/agent'
 
 export function createSnapshotPublisher(): (snapshot: AppSnapshot) => void {
   return (snapshot) => {

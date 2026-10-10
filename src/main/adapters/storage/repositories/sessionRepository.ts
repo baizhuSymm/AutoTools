@@ -1,6 +1,6 @@
-import type { Conversation } from '../../shared/agent'
-import type { HistoryTurns, WireMessage } from '../contracts/agent'
-import type { AgentDatabase } from '../storage/agentDatabase'
+import type { Conversation } from '../../../../shared/agent'
+import type { HistoryTurns } from '../../../contracts/agent'
+import type { AgentDatabase } from '../agentDatabase'
 
 export class SessionRepository {
   constructor(private database: AgentDatabase) {}
@@ -29,9 +29,9 @@ export class SessionRepository {
   history(id: string): HistoryTurns {
     return this.database.read().history[id] ?? []
   }
-  appendTurn(id: string, turn: WireMessage[]): void {
+  setHistory(id: string, turns: HistoryTurns): void {
     this.database.update((data) => {
-      data.history[id] = [...(data.history[id] ?? []), structuredClone(turn)].slice(-20)
+      data.history[id] = structuredClone(turns)
     })
   }
 }

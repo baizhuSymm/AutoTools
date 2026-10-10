@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { z } from 'zod'
-import { AgentRunner } from '../src/main/agent/runner'
+import { AgentRunner } from '../src/main/services/agent/runner'
 import type { ModelAdapter } from '../src/main/contracts/agent'
 
 test('request timeout and continuation budget fail without executing tools', async (context) => {

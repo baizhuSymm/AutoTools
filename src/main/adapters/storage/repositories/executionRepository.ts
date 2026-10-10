@@ -1,5 +1,5 @@
-import type { ToolCall } from '../../shared/agent'
-import type { AgentDatabase } from '../storage/agentDatabase'
+import type { ToolCall } from '../../../../shared/agent'
+import type { AgentDatabase } from '../agentDatabase'
 
 export class ExecutionRepository {
   constructor(private database: AgentDatabase) {}
@@ -11,12 +11,11 @@ export class ExecutionRepository {
       const index = data.calls.findIndex((item) => item.id === call.id)
       if (index < 0) data.calls.push(structuredClone(call))
       else data.calls[index] = structuredClone(call)
-      if (data.calls.length > 200) {
-        const disposable = data.calls.findIndex(
-          (item) => !['awaiting_confirmation', 'executing', 'validating'].includes(item.status)
-        )
-        if (disposable >= 0) data.calls.splice(disposable, 1)
-      }
+    })
+  }
+  deleteCall(id: string): void {
+    this.database.update((data) => {
+      data.calls = data.calls.filter((call) => call.id !== id)
     })
   }
   deleteScope(scope: string): void {

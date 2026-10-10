@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { PersistenceCoordinator } from '../src/main/storage/persistenceCoordinator'
+import { PersistenceCoordinator } from '../src/main/adapters/storage/persistenceCoordinator'
 
 test('flush reports unresolved write failure and successful retry clears it', async () => {
   let fail = true

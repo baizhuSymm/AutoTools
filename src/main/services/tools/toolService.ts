@@ -1,8 +1,8 @@
-import type { ToolCall, ToolResult } from '../../shared/agent'
-import type { ToolExecutor } from './tools/executor'
-import type { ToolDefinition } from '../contracts/agent'
-import type { ExecutionRepository } from '../repositories/executionRepository'
-import type { PersistenceCoordinator } from '../storage/persistenceCoordinator'
+import type { ToolCall, ToolResult } from '../../../shared/agent'
+import type { ToolExecutor } from './executor'
+import type { ToolDefinition } from '../../contracts/agent'
+import type { ExecutionRepositoryPort } from '../../contracts/ports'
+import type { PersistencePort } from '../../contracts/ports'
 
 export interface TurnExecutionContext {
   sessionId: string
@@ -15,8 +15,8 @@ export class ToolService {
   private manual = new Map<AbortController, Promise<ToolResult>>()
   constructor(
     private executor: ToolExecutor,
-    private repository: ExecutionRepository,
-    private persistence: PersistenceCoordinator,
+    private repository: ExecutionRepositoryPort,
+    private persistence: PersistencePort,
     private changed: () => void
   ) {}
   definitions(): ToolDefinition[] {
@@ -30,6 +30,13 @@ export class ToolService {
   }
   private update(call: ToolCall): void {
     this.repository.upsert(call)
+    const calls = this.repository.calls()
+    if (calls.length > 200) {
+      const disposable = calls.find(
+        (item) => !['awaiting_confirmation', 'executing', 'validating'].includes(item.status)
+      )
+      if (disposable) this.repository.deleteCall(disposable.id)
+    }
     this.persistence.schedule()
     this.changed()
   }

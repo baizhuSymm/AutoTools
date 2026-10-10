@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { mkdtemp, rm, writeFile, readFile, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { prepareStorage } from '../src/main/storage/migration'
+import { prepareStorage } from '../src/main/adapters/storage/migration'
 import { fileSettings } from './helpers/storageFixture'
 
 const legacy = {

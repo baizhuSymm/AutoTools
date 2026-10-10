@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createApplication } from '../src/main/bootstrap/createApplication'
 import { fileSettings } from './helpers/storageFixture'
-import { AgentDatabase } from '../src/main/storage/agentDatabase'
+import { AgentDatabase } from '../src/main/adapters/storage/agentDatabase'
 import { ToolExecutor } from '../src/main/services/tools/executor'
 import { z } from 'zod'
 

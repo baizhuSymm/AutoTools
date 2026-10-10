@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { recoverAgentData } from '../src/main/storage/recovery'
-import { parseAgentData, parseSettings } from '../src/main/storage/schema'
+import { recoverAgentData } from '../src/main/services/agent/recovery'
+import { parseAgentData, parseSettings } from '../src/main/adapters/storage/schema'
 
 test('recovery does not mutate source or restore approval authority', () => {
   const source = parseAgentData({

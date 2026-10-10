@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { SnapshotService } from '../src/main/services/snapshotService'
+import { SnapshotService } from '../src/main/services/agent/snapshotService'
 
 test('snapshots are detached and batched publishing stops after disposal', async () => {
   const conversation = { id: 's', title: 'old', messages: [], updatedAt: 1 }

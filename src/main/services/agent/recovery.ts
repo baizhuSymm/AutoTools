@@ -1,7 +1,7 @@
-import type { AgentData } from './schema'
+import type { AgentRecords } from '../../contracts/agent'
 
 // 恢复记录，不恢复审批权限或真实进程。
-export function recoverAgentData(input: AgentData): AgentData {
+export function recoverAgentData(input: AgentRecords): AgentRecords {
   const state = structuredClone(input)
   for (const message of state.conversations.flatMap((session) => session.messages)) {
     if (message.status === 'streaming') message.status = 'cancelled'

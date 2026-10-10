@@ -1,17 +1,17 @@
 import { randomUUID } from 'node:crypto'
-import type { ChatMessage, Conversation } from '../../shared/agent'
-import type { WireMessage } from '../contracts/agent'
-import { boundedHistory } from '../agent/history'
-import type { SessionRepository } from '../repositories/sessionRepository'
-import type { ExecutionRepository } from '../repositories/executionRepository'
-import type { PersistenceCoordinator } from '../storage/persistenceCoordinator'
+import type { ChatMessage, Conversation } from '../../../shared/agent'
+import type { WireMessage } from '../../contracts/agent'
+import { boundedHistory } from './history'
+import type { SessionRepositoryPort } from '../../contracts/ports'
+import type { ExecutionRepositoryPort } from '../../contracts/ports'
+import type { PersistencePort } from '../../contracts/ports'
 
 export class SessionService {
   private closing = false
   constructor(
-    private repository: SessionRepository,
-    private executions: ExecutionRepository,
-    private persistence: PersistenceCoordinator,
+    private repository: SessionRepositoryPort,
+    private executions: ExecutionRepositoryPort,
+    private persistence: PersistencePort,
     private changed: () => void
   ) {}
   list(): Conversation[] {
@@ -69,7 +69,10 @@ export class SessionService {
     this.changed()
   }
   appendHistory(id: string, turn: WireMessage[]): void {
-    this.repository.appendTurn(id, turn)
+    this.repository.setHistory(
+      id,
+      [...this.repository.history(id), structuredClone(turn)].slice(-20)
+    )
   }
   close(): void {
     this.closing = true

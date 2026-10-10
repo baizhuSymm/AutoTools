@@ -1,10 +1,10 @@
-import type { ModelConfig, ToolCall } from '../../shared/agent'
-import type { ModelAdapter } from '../contracts/agent'
-import type { AgentRunner, RunnerEvent } from '../agent/runner'
+import type { ModelConfig, ToolCall } from '../../../shared/agent'
+import type { ModelAdapter } from '../../contracts/agent'
+import type { AgentRunner, RunnerEvent } from './runner'
 import type { SessionService } from './sessionService'
 import type { ModelConfigService } from './modelConfigService'
-import type { ToolService } from './toolService'
-import type { PersistenceCoordinator } from '../storage/persistenceCoordinator'
+import type { ToolService } from '../tools/toolService'
+import type { PersistencePort } from '../../contracts/ports'
 
 export class ChatService {
   private controller?: AbortController
@@ -17,7 +17,7 @@ export class ChatService {
     private tools: ToolService,
     private runner: AgentRunner,
     private modelFactory: (config: ModelConfig, key: string) => ModelAdapter,
-    private persistence: PersistenceCoordinator,
+    private persistence: PersistencePort,
     private changed: () => void
   ) {}
   activeSessionId(): string | null {

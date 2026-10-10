@@ -1,7 +1,7 @@
-import { ReasoningSplitter } from '../../shared/reasoning'
-import type { ToolResult } from '../../shared/agent'
-import type { ToolDefinition } from '../contracts/agent'
-import type { ModelAdapter, ModelCall, WireMessage } from '../contracts/agent'
+import { ReasoningSplitter } from '../../../shared/reasoning'
+import type { ToolResult } from '../../../shared/agent'
+import type { ToolDefinition } from '../../contracts/agent'
+import type { ModelAdapter, ModelCall, WireMessage } from '../../contracts/agent'
 import { summarizeResult } from './toolSummary'
 
 export interface RunnerInput {

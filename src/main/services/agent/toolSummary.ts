@@ -1,4 +1,4 @@
-import type { ToolResult } from '../../shared/agent'
+import type { ToolResult } from '../../../shared/agent'
 export function summarizeResult(result: ToolResult): string {
   const body = JSON.stringify(result)
   if (Buffer.byteLength(body) <= 8192) return body

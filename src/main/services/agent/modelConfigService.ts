@@ -1,12 +1,7 @@
 import { z } from 'zod'
-import type { ModelConfig } from '../../shared/agent'
-import type { SecretVault } from '../contracts/agent'
-import type { ConfigRepository } from '../repositories/configRepository'
-
-export type ModelProbe = (
-  config: ModelConfig,
-  key: string
-) => Promise<NonNullable<ModelConfig['capabilities']>>
+import type { ModelConfig } from '../../../shared/agent'
+import type { SecretVault, ModelProbe } from '../../contracts/agent'
+import type { ConfigRepositoryPort } from '../../contracts/ports'
 
 export class ModelConfigService {
   private config: ModelConfig = { baseURL: '', model: '', hasKey: false, keyPersistent: false }
@@ -14,14 +9,14 @@ export class ModelConfigService {
   private revision = 0
   warning?: string
   constructor(
-    private repository: ConfigRepository,
+    private repository: ConfigRepositoryPort,
     private vault: SecretVault,
     private probe: ModelProbe,
     private isBusy: () => boolean,
     private changed: () => void
   ) {}
   initialize(): void {
-    const state = this.repository.read()
+    const state = this.repository.readConfig()
     try {
       this.key = state.encryptedKey ? this.vault.decrypt(state.encryptedKey) : ''
     } catch {
@@ -68,7 +63,10 @@ export class ModelConfigService {
   }
   async setCapabilities(capabilities: NonNullable<ModelConfig['capabilities']>): Promise<void> {
     const { hasKey: _hasKey, keyPersistent: _persistent, ...stored } = this.config
-    this.repository.saveConfig({ ...stored, capabilities }, this.repository.read().encryptedKey)
+    this.repository.saveConfig(
+      { ...stored, capabilities },
+      this.repository.readConfig().encryptedKey
+    )
     this.config.capabilities = structuredClone(capabilities)
     this.changed()
   }
