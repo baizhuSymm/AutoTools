@@ -2,7 +2,7 @@
 
 日期：2026-10-10
 
-状态：用户已确认轻量三层方向；本文待用户审阅，尚未实施。基线为 `main` 的 `f6deff0`，崩溃监控已删除。
+状态：用户已确认本文设计；实施计划待审阅，尚未实施。源码基线为 `main` 的 `f6deff0`，崩溃监控已删除。
 
 ## 1. 目标与范围
 
@@ -61,6 +61,7 @@ src/main/
       history.ts
       toolSummary.ts
       systemPrompt.ts
+      recovery.ts
     tools/
       registry.ts
       executor.ts
