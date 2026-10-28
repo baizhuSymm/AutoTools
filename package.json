@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "Local tool Agent - Electron, LangChain and Ant Design X",
   "main": "./out/main/index.js",
-  "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "author": "baizhuSymm",
+  "homepage": "https://github.com/baizhuSymm/AutoTools",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/baizhuSymm/AutoTools.git"
+  },
   "scripts": {
     "test": "node --import tsx --test tests/*.test.ts",
     "test:electron": "node tests/electron.smoke.mjs",
